@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+/*
+  Design system — Moneago
+  Warm, editorial palette for CGP/CGPI. See design brief for the source maquette.
+*/
+@theme inline {
+  /* Surfaces */
+  --color-cream: #f7f3ea;
+  --color-card-alt: #f0ebe0;
+
+  /* Ink / text */
+  --color-ink: #171512;
+  --color-ink-2: #1c1a17;
+  --color-body: #5c5648;
+  --color-muted: #8a8374;
+
+  /* Borders */
+  --color-line: #e7e0d1;
+  --color-chip-line: #ddd5c4;
+
+  /* Accent (gold) */
+  --color-gold: #9c7a2c;
+  --color-gold-2: #c9a24a;
+
+  /* Status */
+  --color-success: #3d7a4d;
+  --color-success-bg: #eaf3ea;
+
+  /* Utility bar */
+  --color-bar-text: #c9c2b3;
+
+  /* Typography */
+  --font-serif: var(--font-newsreader), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-instrument), "Helvetica Neue", Arial, sans-serif;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+/* Reusable primitives, applied via @apply so components stay terse */
+@layer components {
+  .eyebrow {
+    @apply text-[12px] uppercase tracking-[0.12em] font-semibold text-muted;
+  }
+
+  .card {
+    @apply bg-white border border-line rounded-[10px];
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-chip-line bg-white px-3 py-1 text-sm text-body;
+  }
+
+  .btn-solid {
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-ink-2 px-5 py-3 text-sm font-medium text-cream transition-opacity hover:opacity-90;
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-ink-2 bg-transparent px-5 py-3 text-sm font-medium text-ink-2 transition-colors hover:bg-ink-2 hover:text-cream;
+  }
+
+  .input {
+    @apply w-full rounded-md border border-line bg-white px-3.5 py-2.5 text-sm text-ink-2 outline-none focus:border-ink-2;
+  }
+}
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
