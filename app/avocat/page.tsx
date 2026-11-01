@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import { BookingAnimation } from "@/components/avocat/BookingAnimation";
 import { AiReplyDemo } from "@/components/avocat/AiReplyDemo";
+import { createClient } from "@/lib/supabase/server";
 
 const DEMO_LINK = "https://calendar.app.google/k2btydyaoysdvgTx6";
 const SIGNUP = "/signup";
 
 export const metadata: Metadata = {
-  title: "Clotere Avocats — Prise de rendez-vous en ligne et SEO pour cabinets d'avocats",
-  description:
-    "Widget de prise de rendez-vous à 69 €/mois, réponses IA automatiques et accompagnement SEO pour ressortir en premier sur Google dans votre ville.",
+  title: { absolute: "Clotere Avocat — Visibilité et prise de rendez-vous en ligne pour avocats" },
+  alternates: { canonical: "https://avocat.clotere.fr" },
 };
 
 function Check({ className = "h-5 w-5 text-[#ee87cb]" }: { className?: string }) {
@@ -32,11 +32,11 @@ const pillars = [
     ],
   },
   {
-    tag: "Réponses IA",
+    tag: "Réponses prêtes",
     title: "Chaque demande reçoit une réponse, sans que vous leviez le petit doigt.",
     points: [
-      "L'IA lit la demande et la classe : dossier sérieux ou simple question",
-      "Une réponse personnalisée part automatiquement au client",
+      "Chaque demande arrive qualifiée : motif, situation, échéance",
+      "Un message type adapté au motif, prêt à envoyer en un clic",
       "Vous ne recevez que des rendez-vous qualifiés",
     ],
   },
@@ -51,7 +51,13 @@ const pillars = [
   },
 ];
 
-export default function AvocatLanding() {
+export default async function AvocatLanding() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: pro } = user ? await (supabase as any).from("professionals").select("prenom, nom").eq("auth_user_id", user.id).maybeSingle() : { data: null };
+  const initiales = pro ? `${pro.prenom?.[0] ?? ""}${pro.nom?.[0] ?? ""}`.toUpperCase() : (user?.email?.[0] ?? "").toUpperCase();
+
   return (
     <div className="bg-white text-gray-950 antialiased">
       {/* Header + Hero (style Radiant) */}
@@ -59,15 +65,24 @@ export default function AvocatLanding() {
         <div className="absolute inset-2 bottom-0 rounded-[2rem] bg-[linear-gradient(115deg,#fff1be_28%,#ee87cb_70%,#b060ff)] ring-1 ring-black/5 ring-inset sm:bg-[linear-gradient(145deg,#fff1be_28%,#ee87cb_70%,#b060ff)]" />
         <div className="relative mx-auto max-w-6xl px-6">
           <header className="flex items-center justify-between pt-12">
-            <a href="/" className="text-lg font-bold tracking-tight text-gray-950">
-              Clotere <span className="font-medium">Avocats</span>
+            <a href="/" className="flex items-center gap-2 text-gray-950" aria-label="Clotere Avocat">
+              <span className="whitespace-nowrap text-base font-bold tracking-tight sm:text-lg">Clotere <span className="font-medium">Avocat</span></span>
             </a>
             <nav className="flex items-center gap-2 text-sm font-medium text-gray-950">
               <a href="#leviers" className="hidden rounded-full px-4 py-2 hover:bg-black/[2.5%] sm:block">Fonctionnalités</a>
-              <a href="/login" className="hidden rounded-full px-4 py-2 hover:bg-black/[2.5%] sm:block">Se connecter</a>
-              <a href={DEMO_LINK} target="_blank" rel="noopener noreferrer" className="rounded-full bg-gray-950 px-4 py-2 text-white shadow-md hover:bg-gray-800">
-                Réserver une démo
-              </a>
+              {user ? (
+                <a href="/dashboard" className="flex items-center gap-2.5 rounded-full bg-gray-950 py-1.5 pr-4 pl-1.5 text-white shadow-md hover:bg-gray-800">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-xs font-semibold">{initiales}</span>
+                  <span>Mon espace</span>
+                </a>
+              ) : (
+                <>
+                  <a href="/login" className="hidden rounded-full px-4 py-2 hover:bg-black/[2.5%] sm:block">Se connecter</a>
+                  <a href={DEMO_LINK} target="_blank" rel="noopener noreferrer" className="whitespace-nowrap rounded-full bg-gray-950 px-4 py-2 text-white shadow-md hover:bg-gray-800">
+                    <span className="sm:hidden">Démo</span><span className="hidden sm:inline">Réserver une démo</span>
+                  </a>
+                </>
+              )}
             </nav>
           </header>
           <div className="grid grid-cols-1 items-center gap-12 pt-16 pb-24 sm:pt-24 sm:pb-32 lg:grid-cols-2 lg:pt-28 lg:pb-36">
@@ -77,7 +92,7 @@ export default function AvocatLanding() {
               Plus de clients, moins de temps perdu.
             </h1>
             <p className="mt-8 max-w-xl text-pretty text-xl/7 font-medium text-gray-950/75 sm:text-2xl/8">
-              Prise de rendez-vous en ligne, réponses automatiques par IA et référencement local pour les cabinets d&apos;avocats.
+              Prise de rendez-vous en ligne, réponses prêtes à envoyer et référencement local pour les cabinets d&apos;avocats.
             </p>
             <div className="mt-12 flex flex-col gap-x-6 gap-y-4 sm:flex-row">
               <a href={DEMO_LINK} target="_blank" rel="noopener noreferrer" className="rounded-full bg-gray-950 px-6 py-3 text-center text-base font-medium text-white shadow-md hover:bg-gray-800">
@@ -87,7 +102,7 @@ export default function AvocatLanding() {
                 Créer mon compte
               </a>
             </div>
-            <p className="mt-6 text-sm text-gray-950/70">Conforme aux règles de communication de la profession · Hébergé en France · Sans engagement</p>
+            <p className="mt-6 text-sm text-gray-950/70">Conforme aux règles de communication de la profession · Données chiffrées en Europe · Sans engagement</p>
             </div>
             <div className="mx-auto w-full max-w-md lg:max-w-none">
               <BookingAnimation />
@@ -122,7 +137,7 @@ export default function AvocatLanding() {
           {[
             ["On configure vos motifs", "Domaines d'expertise, durées, questions de pré-qualification : on le fait avec vous."],
             ["Vous collez le bouton", "Sur votre site, votre fiche Google, LinkedIn, votre signature mail. 5 minutes."],
-            ["Vous recevez des rdv triés", "L'IA répond au client et vous transmet uniquement les demandes sérieuses."],
+            ["Vous recevez des rdv triés", "Vous validez en un clic : le client reçoit la confirmation et vos consignes."],
           ].map(([t, d], i) => (
             <li key={t} className="rounded-[2rem] bg-white p-8 shadow-md ring-1 ring-black/5">
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-950 text-sm font-semibold text-white">{i + 1}</span>
@@ -162,11 +177,11 @@ export default function AvocatLanding() {
         </div>
       </section>
 
-      {/* Exemple réponse IA */}
+      {/* Exemple de réponse */}
       <section className="bg-gray-950 py-24 text-white">
         <div className="mx-auto max-w-6xl px-6">
           <div className="mx-auto max-w-2xl text-center">
-            <p className="font-mono text-xs font-semibold uppercase tracking-widest text-white/50">Réponses IA</p>
+            <p className="font-mono text-xs font-semibold uppercase tracking-widest text-white/50">Réponses prêtes à envoyer</p>
             <h2 className="mt-2 text-4xl font-medium tracking-tight sm:text-5xl">Chaque client reçoit une réponse. Vous, vous plaidez.</h2>
           </div>
           <AiReplyDemo />
@@ -182,7 +197,7 @@ export default function AvocatLanding() {
         <div className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-2">
           {[
             { name: "Rendez-vous", desc: "La prise de rendez-vous en ligne qui s'intègre partout.", featured: false, cta: "Commencer", href: SIGNUP,
-              features: ["Widget intégrable partout", "Réponses IA automatiques", "Synchronisation d'agenda", "Rappels automatiques clients", "Tableau de bord des rendez-vous"] },
+              features: ["Widget intégrable partout", "Messages types prêts à envoyer", "Synchronisation d'agenda", "Rappels automatiques clients", "Tableau de bord des rendez-vous"] },
             { name: "Croissance", desc: "Le widget + l'accompagnement SEO pour passer devant vos concurrents.", featured: true, cta: "Réserver une démo", href: DEMO_LINK,
               features: ["Tout le module Rendez-vous", "Articles SEO rédigés et publiés chaque mois", "Optimisation de la fiche Google Business", "Stratégie de mots-clés locale", "Reporting mensuel"] },
           ].map((p) => (
@@ -212,7 +227,7 @@ export default function AvocatLanding() {
         </div>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
           {[
-            ["Hébergé en France", "Infrastructure souveraine, données chiffrées."],
+            ["Données hébergées en Europe", "Infrastructure sécurisée, données chiffrées."],
             ["Secret professionnel", "Les échanges avec vos clients restent confidentiels."],
             ["Conforme RGPD", "Aucune donnée revendue, jamais."],
           ].map(([t, d]) => (
@@ -233,7 +248,7 @@ export default function AvocatLanding() {
         <div className="mt-12 divide-y divide-black/5 rounded-[2rem] bg-white px-8 shadow-md ring-1 ring-black/5">
           {[
             ["Est-ce compatible avec mon agenda ?", "Oui : Clotere se synchronise avec Google Calendar et Outlook. Seuls vos créneaux libres sont proposés."],
-            ["Que deviennent les données de mes clients ?", "Elles sont hébergées en France, chiffrées, et ne sont jamais revendues. Le secret professionnel est respecté."],
+            ["Que deviennent les données de mes clients ?", "Elles sont hébergées en Europe, chiffrées, et ne sont jamais revendues. Le secret professionnel est respecté."],
             ["Est-ce conforme à la déontologie ?", "Oui : la prise de rendez-vous et le référencement respectent les règles de communication de la profession d'avocat."],
             ["Suis-je engagé ?", "Non, nos offres sont sans engagement. Vous pouvez arrêter à tout moment."],
             ["Qui écrit les articles SEO ?", "Notre équipe, sur vos domaines d'expertise et votre ville. Vous validez chaque article avant publication."],
@@ -266,11 +281,11 @@ export default function AvocatLanding() {
           </div>
           <div className="grid grid-cols-2 gap-y-10 border-t border-black/5 py-12 lg:grid-cols-6">
             <div className="col-span-2">
-              <p className="text-2xl font-medium tracking-tight text-gray-950">Clotere <span className="text-gray-500">Avocats</span></p>
+              <p className="flex items-center gap-2 text-2xl font-medium tracking-tight text-gray-950"><img src="/logo-clotere.svg" alt="Clotere" className="h-7 w-auto" /><span className="text-gray-500">Avocat</span></p>
             </div>
             {[
               ["Produit", [["Fonctionnalités", "#leviers"], ["Offres", "#offres"], ["Réserver une démo", DEMO_LINK]]],
-              ["Clotere", [["Notaires", "https://notaire.clotere.fr"], ["Experts-comptables", "https://comptelio.fr"]]],
+              ["Clotere", [["Notaires", "https://notaire.clotere.fr"], ["Experts-comptables", "https://comptable.clotere.fr"]]],
               ["Accès", [["Se connecter", "/login"], ["Inscription", SIGNUP]]],
               ["Légal", [["Mentions légales", "https://notaire.clotere.fr/mentions-legales"], ["Confidentialité", "https://notaire.clotere.fr/politique-confidentialite"]]],
             ].map(([title, links]) => (

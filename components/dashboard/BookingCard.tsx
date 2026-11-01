@@ -23,7 +23,7 @@ export function BookingCard({
     <div className="card p-6">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-card-alt text-gold">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-950 text-white">
             <IconCalendarCheck className="h-4 w-4" />
           </div>
           <div>
