@@ -13,7 +13,7 @@ const H24 = 24 * 3600 * 1000;
 
 export function baseUrl(req: Request | null, r?: RdvComplet) {
   if (req) return new URL(req.url).origin;
-  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
+  if (process.env.NEXT_PUBLIC_SITE_URL?.includes("localhost")) return process.env.NEXT_PUBLIC_SITE_URL; // dev local uniquement
   return r?.pro.profession === "comptable" ? "https://comptable.clotere.fr" : "https://avocat.clotere.fr";
 }
 

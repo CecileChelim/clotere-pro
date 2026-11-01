@@ -10,7 +10,7 @@ const dateFr = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { week
    - à la fin : « votre page de prise de rendez-vous est en pause ». */
 
 const base = (profession: string | null) =>
-  process.env.NEXT_PUBLIC_SITE_URL || (profession === "comptable" ? "https://comptable.clotere.fr" : "https://avocat.clotere.fr");
+  (process.env.NEXT_PUBLIC_SITE_URL?.includes("localhost") ? process.env.NEXT_PUBLIC_SITE_URL : null) || (profession === "comptable" ? "https://comptable.clotere.fr" : "https://avocat.clotere.fr");
 
 export async function relancesEssai() {
   const db = createAdminClient();

@@ -1,12 +1,12 @@
--- Démo de l'offre Visibilité sur le cabinet de cecile@clotere.fr (à lancer après la migration 0016).
+-- Démo de l'offre Visibilité (remplacez VOTRE_EMAIL par l'e-mail du compte à tester ; à lancer après la migration 0016).
 -- Pour un vrai client : remplacez l'e-mail, puis insérez ses articles / stats / rapports de la même façon.
 
 -- 1. Activer l'offre
 update cabinets set offre_visibilite = true, offre_visibilite_depuis = current_date, publication_cible = 'site_client'
-where id = (select cabinet_id from professionals where email = 'cecile@clotere.fr');
+where id = (select cabinet_id from professionals where email = 'VOTRE_EMAIL');
 
 -- 2. Les 3 articles du mois (à relire) + 3 articles déjà publiés
-with c as (select cabinet_id as id from professionals where email = 'cecile@clotere.fr')
+with c as (select cabinet_id as id from professionals where email = 'VOTRE_EMAIL')
 insert into articles (cabinet_id, mois, titre, mot_cle, contenu, statut, pousse_le, notifie_le, valide_le, publie_le, url_publication, clics, impressions)
 select c.id, v.mois::date, v.titre, v.mot_cle, v.contenu, v.statut, v.pousse::timestamptz, v.pousse::timestamptz,
        case when v.statut = 'publie' then v.pousse::timestamptz + interval '3 days' end,
@@ -28,7 +28,7 @@ from c, (values
 ) as v(mois, titre, mot_cle, contenu, statut, pousse, url, clics, impressions);
 
 -- 3. Statistiques Search Console des 6 derniers mois
-with c as (select cabinet_id as id from professionals where email = 'cecile@clotere.fr')
+with c as (select cabinet_id as id from professionals where email = 'VOTRE_EMAIL')
 insert into visibilite_stats (cabinet_id, mois, clics, impressions, position)
 select c.id, (date_trunc('month', now()) - (n || ' month')::interval)::date, v.clics, v.impr, v.pos
 from c, (values (5, 48, 1900, 24.3), (4, 71, 2600, 19.8), (3, 112, 4100, 15.2), (2, 168, 6300, 12.1), (1, 254, 9800, 9.6), (0, 331, 12400, 8.2)) as v(n, clics, impr, pos)
@@ -37,4 +37,4 @@ on conflict (cabinet_id, mois) do update set clics = excluded.clics, impressions
 -- 4. Rapport trimestriel : déposez d'abord le PDF dans Storage › bucket « rapports »,
 --    dans un dossier au nom de l'id du cabinet (ex. <cabinet_id>/2026-T3.pdf), puis :
 -- insert into rapports (cabinet_id, titre, periode, fichier)
--- select cabinet_id, 'Rapport T3 2026', '2026-T3', cabinet_id || '/2026-T3.pdf' from professionals where email = 'cecile@clotere.fr';
+-- select cabinet_id, 'Rapport T3 2026', '2026-T3', cabinet_id || '/2026-T3.pdf' from professionals where email = 'VOTRE_EMAIL';
