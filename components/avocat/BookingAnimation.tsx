@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 const STEPS = 4;
-const motifs = ["Droit de la famille", "Droit du travail", "Droit immobilier", "Droit des affaires"];
+const MOTIFS_DEFAUT = ["Droit de la famille", "Droit du travail", "Droit immobilier", "Droit des affaires"];
 const types = ["Au cabinet", "En visio"];
 const jours = [["Lun", "3"], ["Mar", "4"], ["Mer", "5"], ["Jeu", "6"]];
 const heures = ["09:00", "10:30", "14:00", "16:30"];
@@ -16,7 +16,15 @@ function Option({ label, active }: { label: string; active: boolean }) {
   );
 }
 
-export function BookingAnimation() {
+export type BookingAnimationProps = {
+  initiales?: string; nom?: string; sousTitre?: string; motifs?: string[]; situation?: string; confirmation?: string; accent?: string;
+};
+
+export function BookingAnimation({
+  initiales = "MD", nom = "Maître Durand", sousTitre = "Cabinet Durand Avocats · Paris 8e", motifs = MOTIFS_DEFAUT,
+  situation = "Je souhaite engager une procédure de divorce par consentement mutuel…",
+  confirmation = "Bonjour, Maître Durand vous recevra mardi. Pour gagner du temps, préparez votre livret de famille et la liste de vos biens communs.",
+}: BookingAnimationProps = {}) {
   const [step, setStep] = useState(0);
   const [picked, setPicked] = useState(false);
 
@@ -32,10 +40,10 @@ export function BookingAnimation() {
   return (
     <div className="overflow-hidden rounded-[2rem] bg-white shadow-2xl ring-1 ring-black/5">
       <div className="flex items-center gap-3 bg-gray-950 px-6 py-4 text-white">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-sm font-semibold">MD</div>
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-sm font-semibold">{initiales}</div>
         <div>
-          <p className="text-sm font-semibold">Maître Durand</p>
-          <p className="text-xs text-white/60">Cabinet Durand Avocats · Paris 8e</p>
+          <p className="text-sm font-semibold">{nom}</p>
+          <p className="text-xs text-white/60">{sousTitre}</p>
         </div>
       </div>
       <div className="flex gap-1.5 px-6 pt-5">
@@ -56,7 +64,7 @@ export function BookingAnimation() {
             <div className="grid grid-cols-2 gap-2">{types.map((t, i) => <Option key={t} label={t} active={picked && i === 1} />)}</div>
             <p className="mt-6 mb-2 text-sm font-medium text-gray-950">Décrivez brièvement votre situation</p>
             <div className="rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-600 ring-1 ring-black/5">
-              Je souhaite engager une procédure de divorce par consentement mutuel…
+              {situation}
             </div>
           </>
         )}
@@ -81,8 +89,8 @@ export function BookingAnimation() {
             <p className="mt-3 text-base font-semibold text-gray-950">Rendez-vous confirmé</p>
             <p className="text-sm text-gray-500">Mardi 4 · 14:00 · En visio</p>
             <div className={`mt-5 w-full rounded-xl bg-gray-50 p-4 text-left ring-1 ring-black/5 transition-all duration-500 ${picked ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"}`}>
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">✦ Réponse envoyée par l&apos;IA</p>
-              <p className="mt-2 text-sm text-gray-700">Bonjour, Maître Durand vous recevra mardi. Pour gagner du temps, préparez votre livret de famille et la liste de vos biens communs.</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">✦ Message de votre cabinet</p>
+              <p className="mt-2 text-sm text-gray-700">{confirmation}</p>
             </div>
           </div>
         )}

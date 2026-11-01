@@ -1,86 +1,85 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { IconArrowRight } from "@/components/ui/icons";
+import { createBrowserClient } from "@supabase/ssr";
+import { professionFromHost, PROFESSIONS, type Profession } from "@/lib/professions-config";
+
+const input = "w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-950";
 
 function LoginForm() {
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") ?? "/dashboard";
-
+  // /inscription renvoie lui-même vers /dashboard si l'inscription est terminée.
+  const next = searchParams.get("next") ?? "/inscription";
+  const [profession, setProfession] = useState<Profession>("avocat");
+  const [mode, setMode] = useState<"login" | "reset">("login");
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [password, setPassword] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "sent" | "error">("idle");
+  const [error, setError] = useState("");
 
-  async function handleSubmit(e: React.FormEvent) {
+  useEffect(() => setProfession(professionFromHost(window.location.host)), []);
+  const supabase = () => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+
+  async function login(e: React.FormEvent) {
     e.preventDefault();
-    setStatus("sending");
+    setStatus("loading");
+    const { error } = await supabase().auth.signInWithPassword({ email, password });
+    if (error) {
+      setError(error.message.includes("confirmed") ? "Confirmez d'abord votre email (lien reçu à l'inscription)." : "Email ou mot de passe incorrect.");
+      setStatus("error");
+      return;
+    }
+    window.location.href = next;
+  }
 
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-      },
+  async function reset(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("loading");
+    const { error } = await supabase().auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
     });
-
-    setStatus(error ? "error" : "sent");
+    if (error) { setError("Une erreur est survenue, merci de réessayer."); setStatus("error"); return; }
+    setStatus("sent");
   }
 
   return (
-    <div className="w-full max-w-sm">
-      <Link href="/" className="font-serif text-2xl text-ink-2">
-        Moneago
-      </Link>
+    <div className="flex min-h-screen items-center justify-center bg-white px-6">
+      <div className="w-full max-w-sm">
+        <Link href="/" className="text-xl font-bold tracking-tight text-gray-950">{PROFESSIONS[profession].brand}</Link>
+        <h1 className="mt-10 text-3xl font-medium tracking-tight text-gray-950">
+          {mode === "login" ? "Se connecter" : "Mot de passe oublié"}
+        </h1>
 
-      <h1 className="mt-8 font-serif text-2xl text-ink-2">Connexion à votre espace CGP</h1>
-      <p className="mt-2 text-sm text-body">
-        Recevez un lien de connexion sécurisé par email, sans mot de passe.
-      </p>
+        {mode === "reset" && status === "sent" ? (
+          <div className="mt-8 rounded-2xl bg-gray-50 p-5 text-sm text-gray-700 ring-1 ring-black/5">
+            Si un compte existe pour <strong>{email}</strong>, un lien pour choisir un nouveau mot de passe vient d&apos;être envoyé.
+          </div>
+        ) : (
+          <form onSubmit={mode === "login" ? login : reset} className="mt-8 space-y-3">
+            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="vous@cabinet.fr" className={input} />
+            {mode === "login" && (
+              <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mot de passe" className={input} />
+            )}
+            <button type="submit" disabled={status === "loading"} className="w-full rounded-full bg-gray-950 px-4 py-3 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-60">
+              {status === "loading" ? "…" : mode === "login" ? "Se connecter" : "Recevoir le lien"}
+            </button>
+            {status === "error" && <p className="text-sm text-red-600">{error}</p>}
+          </form>
+        )}
 
-      {status === "sent" ? (
-        <div className="mt-6 rounded-md border border-success bg-success-bg px-4 py-3 text-sm text-success">
-          Un lien de connexion vient de vous être envoyé à {email}. Vérifiez votre boîte mail.
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="mt-6 space-y-3">
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="vous@cabinet.fr"
-            className="w-full rounded-md border border-line bg-white px-4 py-3 text-sm text-ink-2 outline-none focus:border-ink-2"
-          />
-          <button type="submit" disabled={status === "sending"} className="btn-solid w-full">
-            {status === "sending" ? "Envoi..." : "Recevoir le lien de connexion"}
-            <IconArrowRight className="h-4 w-4" />
+        <div className="mt-6 flex flex-col gap-2 text-sm text-gray-500">
+          <button type="button" onClick={() => { setMode(mode === "login" ? "reset" : "login"); setStatus("idle"); }} className="text-left underline hover:text-gray-950">
+            {mode === "login" ? "Mot de passe oublié ?" : "Retour à la connexion"}
           </button>
-          {status === "error" && (
-            <p className="text-sm text-red-600">
-              Une erreur est survenue. Merci de réessayer dans quelques instants.
-            </p>
-          )}
-        </form>
-      )}
-
-      <p className="mt-6 text-sm text-muted">
-        Pas encore de fiche Moneago ?{" "}
-        <Link href="/signup" className="text-gold underline">
-          Créez votre profil
-        </Link>
-      </p>
+          <p>Pas encore de compte ? <Link href="/signup" className="font-medium text-gray-950 underline">Créer un compte</Link></p>
+        </div>
+      </div>
     </div>
   );
 }
 
 export default function LoginPage() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-cream px-6">
-      <Suspense fallback={null}>
-        <LoginForm />
-      </Suspense>
-    </div>
-  );
+  return <Suspense><LoginForm /></Suspense>;
 }

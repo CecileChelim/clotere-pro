@@ -4,7 +4,7 @@ import { IconCalendarCheck, IconArrowRight } from "@/components/ui/icons";
 export function AgendaSyncCard() {
   return (
     <div className="card p-5">
-      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-card-alt text-gold">
+      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-950 text-white">
         <IconCalendarCheck className="h-4 w-4" />
       </div>
       <p className="mt-3 text-sm font-medium text-ink-2">Synchronisez votre agenda</p>

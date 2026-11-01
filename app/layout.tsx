@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Newsreader, Instrument_Sans } from "next/font/google";
 import "./globals.css";
+import { headers } from "next/headers";
+import { professionFromHost } from "@/lib/professions-config";
 
 const newsreader = Newsreader({
   subsets: ["latin"],
@@ -14,19 +16,49 @@ const instrumentSans = Instrument_Sans({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "Moneago — La prise de rendez-vous en ligne pour les CGP & CGPI",
-  description:
-    "Publiez votre fiche professionnelle et activez la prise de rendez-vous en ligne en 5 minutes. Sans engagement, conforme ORIAS.",
-};
+const META = {
+  comptable: {
+    nom: "Clotere Expert-comptable",
+    url: "https://comptable.clotere.fr",
+    titre: "Clotere Expert-comptable — Visibilité et prise de rendez-vous pour experts-comptables",
+    description:
+      "Faites trouver votre cabinet sur Google, attirez les bons profils et transformez chaque visite en rendez-vous qualifié. Spécialiste des experts-comptables, déontologie respectée.",
+    icone: "comptable",
+  },
+  avocat: {
+    nom: "Clotere Avocat",
+    url: "https://avocat.clotere.fr",
+    titre: "Clotere Avocat — Visibilité et prise de rendez-vous en ligne pour avocats",
+    description:
+      "Prise de rendez-vous en ligne, réponses prêtes à envoyer et référencement Google pour faire de votre cabinet d'avocats le premier qu'on trouve dans votre ville.",
+    icone: "avocat",
+  },
+} as const;
 
-export default function RootLayout({
+export async function generateMetadata(): Promise<Metadata> {
+  const profession = professionFromHost((await headers()).get("host"));
+  const m = profession === "comptable" ? META.comptable : META.avocat;
+  return {
+    metadataBase: new URL(m.url),
+    title: { default: m.titre, template: `%s · ${m.nom}` },
+    description: m.description,
+    applicationName: m.nom,
+    openGraph: { type: "website", locale: "fr_FR", siteName: m.nom, title: m.titre, description: m.description, url: m.url, images: [{ url: `/icons/icon-${m.icone}-512.png`, width: 512, height: 512 }] },
+    twitter: { card: "summary", title: m.titre, description: m.description },
+    icons: {
+      icon: [{ url: `/icons/icon-${m.icone}.svg`, type: "image/svg+xml" }, { url: `/icons/icon-${m.icone}-32.png`, sizes: "32x32", type: "image/png" }],
+      apple: `/icons/apple-${m.icone}.png`,
+    },
+  };
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={`${newsreader.variable} ${instrumentSans.variable}`}>
+    <html lang="fr" data-theme={professionFromHost((await headers()).get("host"))} className={`${newsreader.variable} ${instrumentSans.variable}`}>
       <body className="antialiased">{children}</body>
     </html>
   );

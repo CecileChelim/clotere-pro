@@ -4,10 +4,14 @@ import { updateSession } from "@/lib/supabase/middleware";
 export async function proxy(request: NextRequest) {
   const host = request.headers.get("host") ?? "";
   // avocat.clotere.fr (et avocat.localhost en dev) : la racine affiche la landing avocat
-  if (host.startsWith("avocat.") && request.nextUrl.pathname === "/") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/avocat";
-    return NextResponse.rewrite(url);
+  if (request.nextUrl.pathname === "/") {
+    const cible = host.startsWith("avocat.") ? "/avocat"
+      : host.startsWith("comptable.") || host.includes("comptelio") ? "/comptable" : null;
+    if (cible) {
+      const url = request.nextUrl.clone();
+      url.pathname = cible;
+      return NextResponse.rewrite(url);
+    }
   }
   return updateSession(request);
 }

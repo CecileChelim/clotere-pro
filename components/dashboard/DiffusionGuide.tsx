@@ -2,14 +2,14 @@ const LINKEDIN_STEPS = [
   {
     title: "Ajoutez le lien à l'introduction de votre profil (recommandé)",
     description:
-      "Depuis votre profil, cliquez sur l'icône crayon à côté de votre nom pour modifier l'introduction. Dans le champ « Site web », collez votre lien Moneago et choisissez un texte de bouton, par exemple « Prendre rendez-vous ». Le lien apparaît alors en évidence, sous votre photo.",
+      "Depuis votre profil, cliquez sur l'icône crayon à côté de votre nom pour modifier l'introduction. Dans le champ « Site web », collez votre lien de rendez-vous et choisissez un texte de bouton, par exemple « Prendre rendez-vous ». Le lien apparaît alors en évidence, sous votre photo.",
     href: "https://www.linkedin.com/help/linkedin/answer/a727760",
     hrefLabel: "Voir le guide LinkedIn : ajouter un lien à l'introduction",
   },
   {
     title: "Mettez-le en avant dans « Éléments mis en avant »",
     description:
-      "Sur votre profil, sélectionnez « Ajouter une section du profil » → « Recommandé » → « Éléments mis en avant », puis « Ajouter un lien » et collez votre lien Moneago. Il s'affiche sous forme de carte cliquable, juste sous la section À propos.",
+      "Sur votre profil, sélectionnez « Ajouter une section du profil » → « Recommandé » → « Éléments mis en avant », puis « Ajouter un lien » et collez votre lien de rendez-vous. Il s'affiche sous forme de carte cliquable, juste sous la section À propos.",
     href: "https://www.linkedin.com/help/linkedin/answer/a1513395",
     hrefLabel: "Voir le guide LinkedIn : section Éléments mis en avant",
   },
@@ -24,7 +24,7 @@ const GOOGLE_STEPS = [
   {
     title: "Renseignez le lien de réservation",
     description:
-      "Dans « Modifier le profil » → « Coordonnées », repérez le champ dédié aux liens de rendez-vous/réservation (« Booking link » ou « Appointment URL » selon la langue de l'interface), collez votre lien Moneago, puis enregistrez.",
+      "Dans « Modifier le profil » → « Coordonnées », repérez le champ dédié aux liens de rendez-vous/réservation (« Booking link » ou « Appointment URL » selon la langue de l'interface), collez votre lien de rendez-vous, puis enregistrez.",
   },
   {
     title: "Le bouton « Réserver » apparaît sur votre fiche",

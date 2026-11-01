@@ -1,53 +1,39 @@
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { CopyLinkCard } from "@/components/dashboard/CopyLinkCard";
-import { DiffusionGuide } from "@/components/dashboard/DiffusionGuide";
+import DiffusionWidget from "@/components/widget/DiffusionWidget";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://moneago.fr";
-
-export default async function DashboardDiffusionPage() {
+export default async function DiffusionPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login?next=/dashboard/diffusion");
 
-  const { data: professional } = user
-    ? await supabase
-        .from("professionals")
-        .select("ville, slug")
-        .eq("auth_user_id", user.id)
-        .maybeSingle()
-    : { data: null };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = supabase as any;
+  const { data: pro } = await db
+    .from("professionals")
+    .select("id, slug, prenom, nom, email, telephone, profession, cabinets(nom, telephone)")
+    .eq("auth_user_id", user.id)
+    .maybeSingle();
+  if (!pro) redirect("/inscription");
 
-  const bookingUrl = professional
-    ? `${SITE_URL}/${encodeURIComponent(
-        (professional.ville ?? "").toLowerCase().replace(/\s+/g, "-")
-      )}/${professional.slug}`
-    : null;
+  const h = await headers();
+  const host = h.get("host") ?? "avocat.clotere.fr";
+  const base = `${host.includes("localhost") ? "http" : "https"}://${host}`;
+  const cab = Array.isArray(pro.cabinets) ? pro.cabinets[0] : pro.cabinets;
+  const titre = pro.profession === "avocat" ? "Maître " : "";
 
   return (
-    <div>
-      <p className="eyebrow">Diffusez votre lien</p>
-      <h1 className="mt-2 font-serif text-3xl text-ink-2">
-        Publiez votre lien de prise de rendez-vous
-      </h1>
-      <p className="mt-3 max-w-2xl text-sm text-body">
-        Votre lien de réservation Moneago fonctionne partout où vous êtes visible en ligne.
-        Copiez-le, puis suivez le guide ci-dessous pour l&rsquo;ajouter sur votre profil LinkedIn
-        et sur votre fiche Google Business.
-      </p>
-
-      <div className="mt-8">
-        {bookingUrl ? (
-          <CopyLinkCard url={bookingUrl} />
-        ) : (
-          <div className="card p-6 text-sm text-muted">
-            Complétez votre fiche professionnelle (ville et identifiant) pour obtenir votre lien
-            de réservation.
-          </div>
-        )}
-      </div>
-
-      <DiffusionGuide />
-    </div>
+    <DiffusionWidget
+      proId={pro.id}
+      slug={pro.slug}
+      base={base}
+      nom={`${titre}${pro.prenom} ${pro.nom}`}
+      office={cab?.nom || `Cabinet ${pro.nom}`}
+      cabinetNom={cab?.nom ?? null}
+      telephone={cab?.telephone || pro.telephone}
+      email={pro.email}
+      metier={pro.profession === "comptable" ? "Expert-comptable" : "Avocat"}
+    />
   );
 }
