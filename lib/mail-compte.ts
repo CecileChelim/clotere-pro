@@ -50,7 +50,7 @@ export async function envoyerMailCompte(t: Titulaire, sujet: string, html: strin
 
 
 export const urlEspace = (profession: string | null) =>
-  process.env.NEXT_PUBLIC_SITE_URL || (profession === "comptable" ? "https://comptable.clotere.fr" : "https://avocat.clotere.fr");
+  (process.env.NEXT_PUBLIC_SITE_URL?.includes("localhost") ? process.env.NEXT_PUBLIC_SITE_URL : null) || (profession === "comptable" ? "https://comptable.clotere.fr" : "https://avocat.clotere.fr");
 
 /** Prévient l'équipe Clotere (ADMIN_EMAIL, sinon contact@clotere.fr). */
 export async function prevenirClotere(sujet: string, html: string) {
