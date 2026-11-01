@@ -109,6 +109,7 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false }: { p
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [about, setAbout] = useState(false);
+  const [plus, setPlus] = useState(false); // mobile : infos du pro repliées
   const [suiviUrl, setSuiviUrl] = useState<string | null>(null);
   const [hp, setHp] = useState("");
 
@@ -191,18 +192,22 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false }: { p
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-[1080px] flex-1 px-4 py-8 sm:px-6 sm:py-10">
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-[28px]">Prendre rendez-vous</h1>
-        <p className="mt-2 text-[15px] text-gray-500">Réservez un créneau en quelques minutes. Votre demande est confirmée par {lePro} sous 24 h ouvrées.</p>
+      <main className="mx-auto w-full max-w-[1080px] flex-1 px-3 py-4 sm:px-6 sm:py-10">
+        <h1 className="px-1 text-xl font-bold tracking-tight text-gray-900 sm:px-0 sm:text-[28px]">Prendre rendez-vous</h1>
+        <p className="mt-2 hidden text-[15px] text-gray-500 sm:block">Réservez un créneau en quelques minutes. Votre demande est confirmée par {lePro} sous 24 h ouvrées.</p>
 
-        <div className="mt-6 grid grid-cols-1 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm md:grid-cols-[300px_1fr]">
+        <div className="mt-3 grid grid-cols-1 overflow-hidden sm:mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm md:grid-cols-[300px_1fr]">
           {/* ---------- Colonne pro ---------- */}
-          <aside className="flex flex-col border-b border-gray-200 p-6 md:border-r md:border-b-0">
-            {pro.photo
-              ? <img src={pro.photo} alt={pro.nomAffiche} className="h-14 w-14 rounded-xl object-cover" />
-              : <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-violet-100 text-base font-bold text-violet-700">{pro.initiales}</div>}
-            <h2 className="mt-4 text-[17px] font-semibold text-gray-900">{pro.nomAffiche}</h2>
-            <p className="mt-0.5 text-sm text-gray-500">{conf.label.charAt(0).toUpperCase() + conf.label.slice(1)}{pro.cabinet ? ` · ${pro.cabinet}` : ""}</p>
+          <aside className="flex flex-col border-b border-gray-200 p-4 sm:p-6 md:border-r md:border-b-0">
+            <div className="flex items-center gap-3 md:block">
+              {pro.photo
+                ? <img src={pro.photo} alt={pro.nomAffiche} className="h-12 w-12 shrink-0 rounded-xl object-cover md:h-14 md:w-14" />
+                : <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-base font-bold text-violet-700 md:h-14 md:w-14">{pro.initiales}</div>}
+              <div className="min-w-0">
+                <h2 className="text-[17px] font-semibold text-gray-900 md:mt-4">{pro.nomAffiche}</h2>
+                <p className="mt-0.5 truncate text-sm text-gray-500 md:whitespace-normal">{conf.label.charAt(0).toUpperCase() + conf.label.slice(1)}{pro.cabinet ? ` · ${pro.cabinet}` : ""}</p>
+              </div>
+            </div>
             {pro.rating && (
               <a href={pro.reviewsUrl || `https://www.google.com/search?q=${encodeURIComponent(`${cabinetNom} ${pro.adresse ?? ""} avis`)}`}
                 target="_blank" rel="noopener noreferrer" className="group mt-2 inline-flex flex-wrap items-center gap-1 text-[13px] text-gray-500">
@@ -213,6 +218,13 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false }: { p
               </a>
             )}
 
+            <button type="button" onClick={() => setPlus(!plus)} aria-expanded={plus}
+              className="mt-3 flex items-center gap-1 self-start text-[13px] font-semibold text-violet-600 md:hidden">
+              {plus ? "Voir moins" : "Voir plus : adresse, expertise, avis"}
+              <I d={P.chevR} className={`h-3.5 w-3.5 transition ${plus ? "-rotate-90" : "rotate-90"}`} />
+            </button>
+
+            <div className={`${plus ? "flex" : "hidden"} flex-col md:contents`}>
             <ul className="mt-5 space-y-3 text-sm">
               {pro.adresse && <li className="flex gap-3"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-violet-600"><I d={P.pin} className="h-4 w-4" /></span><span className="pt-0.5 text-gray-700">{pro.adresse}</span></li>}
               {pro.telephone && <li className="flex items-center gap-3"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-violet-600"><I d={P.telephone} className="h-4 w-4" /></span><a href={`tel:${pro.telephone.replace(/\s/g, "")}`} className="text-gray-700 hover:text-gray-900">{pro.telephone}</a></li>}
@@ -309,13 +321,15 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false }: { p
               </div>
             )}
 
-            <div className="mt-6 flex gap-3 rounded-xl bg-gray-50 p-3.5 text-[13px] md:mt-auto">
+            <div className="hidden min-h-6 flex-1 md:block" />
+            <div className="mt-6 flex gap-3 rounded-xl bg-gray-50 p-3.5 text-[13px] md:mt-0">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-violet-600 ring-1 ring-gray-200"><I d={P.shield} className="h-4 w-4" /></span>
               <div>
                 <p className="font-semibold text-gray-900">Vos données sont protégées</p>
                 <p className="mt-1 text-gray-500">Chiffrées et transmises uniquement {pro.profession === "avocat" ? "à votre avocat" : "au cabinet"}. Jamais revendues.</p>
                 <button type="button" onClick={() => setAbout(true)} className="mt-2 inline-block font-semibold text-violet-600 hover:underline">En savoir plus sur {conf.brand} ›</button>
               </div>
+            </div>
             </div>
           </aside>
 
