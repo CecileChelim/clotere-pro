@@ -56,7 +56,6 @@ export default async function BookingPage({ params }: Params) {
   if (cab?.id && (ilYa > 7 * 24 * 3600e3 || (ficheChangee && ilYa > 10 * 60e3))) {
     after(() => synchroniserGoogle(cab.id).then((r) => { if (!r.ok) console.warn("[google]", r.raison); }));
   }
-  console.log("[page rdv] cabinet :", JSON.stringify(cab));
   const profession = d.pro.profession === "comptable" ? "comptable" : "avocat";
   const pro: BookingPro = {
     id: d.pro.id,

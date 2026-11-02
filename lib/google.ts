@@ -25,6 +25,8 @@ async function urlFinale(url: string) {
     const m = u.match(/consent\.google\.[a-z.]+\/.*[?&]continue=([^&]+)/);
     if (m) { u = decodeURIComponent(m[1]); continue; }
     if (/\/maps\/place\/|[?&](placeid|place_id|query_place_id|cid)=/.test(u)) return u;
+    // share.google/… → www.google.com/search?q=Nom+de+la+fiche&kgmid=… : le nom suffit.
+    if (/google\.[a-z.]+\/search\?/.test(u) && /[?&]q=/.test(u)) return u;
     try {
       const res = await fetch(u, { redirect: "manual", headers: { "User-Agent": "Mozilla/5.0 (compatible; Clotere/1.0)" }, signal: AbortSignal.timeout(5000) });
       const loc = res.headers.get("location");
@@ -38,7 +40,8 @@ async function urlFinale(url: string) {
 /** Extrait d'un lien Google Maps : identifiant de lieu, nom, coordonnées. */
 function lireUrl(u: string) {
   const id = u.match(/[?&](?:placeid|place_id|query_place_id)=([A-Za-z0-9_-]{10,})/)?.[1];
-  const nom = u.match(/\/maps\/place\/([^/@?]+)/)?.[1];
+  const nom = u.match(/\/maps\/place\/([^/@?]+)/)?.[1]
+    ?? (/google\.[a-z.]+\/search\?/.test(u) ? u.match(/[?&]q=([^&]+)/)?.[1] : undefined);
   const c = u.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/) ?? u.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
   return {
     id,
@@ -55,15 +58,18 @@ async function details(key: string, id: string): Promise<Place | null> {
 }
 
 /** Trouve la fiche Google à partir du lien collé par le pro (fiche, partage maps.app.goo.gl, lien d'avis…). */
-async function placeDepuisLien(key: string, lien: string): Promise<Place | null> {
-  const infos = lireUrl(await urlFinale(lien));
+async function placeDepuisLien(key: string, lien: string, ville?: string | null): Promise<Place | null> {
+  const finale = await urlFinale(lien);
+  const infos = lireUrl(finale);
+  if (!infos.id && !infos.nom) console.warn("[google] lien de fiche non reconnu :", lien, "→", finale.slice(0, 200));
   if (infos.id) return details(key, infos.id);
   if (!infos.nom) return null;
   const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Goog-Api-Key": key, "X-Goog-FieldMask": FIELDS },
     body: JSON.stringify({
-      textQuery: infos.nom, languageCode: "fr", regionCode: "FR",
+      textQuery: infos.lat == null && ville && !infos.nom.toLowerCase().includes(ville.toLowerCase()) ? `${infos.nom} ${ville}` : infos.nom,
+      languageCode: "fr", regionCode: "FR",
       ...(infos.lat != null ? { locationBias: { circle: { center: { latitude: infos.lat, longitude: infos.lng }, radius: 300 } } } : {}),
     }),
   });
@@ -91,7 +97,7 @@ export async function synchroniserGoogle(cabinetId: string) {
   if (cab.google_business_url) {
     match = cab.google_place_id && cab.google_place_url === cab.google_business_url
       ? await details(key, cab.google_place_id)
-      : await placeDepuisLien(key, cab.google_business_url);
+      : await placeDepuisLien(key, cab.google_business_url, cab.ville);
   } else if (cab.google_place_id) {
     match = await details(key, cab.google_place_id);
   }
