@@ -19,6 +19,7 @@ const EVENEMENTS: Record<string, { label: string; vers: "client" | "pro" }> = {
   propose_client: { label: "Proposition de nouveaux créneaux", vers: "client" },
   choix_pro: { label: "Le client a choisi un créneau", vers: "pro" },
   annule_client: { label: "Annulation du rendez-vous", vers: "client" },
+  deplace_client: { label: "Rendez-vous déplacé (nouveau créneau)", vers: "client" },
   annule_pro: { label: "Annulation par le client", vers: "pro" },
   relance_pro: { label: "Relance : demande sans réponse", vers: "pro" },
   rappel_client: { label: "Rappel la veille", vers: "client" },
@@ -86,10 +87,10 @@ export default async function GestionPage({ params }: { params: Promise<{ token:
           {r.statut === "confirmé" ? (
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-gray-600">✓ Le client a reçu la confirmation{r.message_pro ? " avec votre message" : ""} et l&apos;invitation agenda.</p>
-              <GererRdv token={token} statut={r.statut} modele={messageModele(r)} modeleRefus={messageRefusModele(r)} creneauxProposes={null} />
+              <GererRdv token={token} statut={r.statut} modele={messageModele(r)} modeleRefus={messageRefusModele(r)} creneauxProposes={null} creneauActuel={r.creneau_debut} />
             </div>
           ) : r.statut !== "supprimé" && (
-          <GererRdv token={token} statut={r.statut} modele={messageModele(r)} modeleRefus={messageRefusModele(r)}
+          <GererRdv token={token} statut={r.statut} modele={messageModele(r)} modeleRefus={messageRefusModele(r)} creneauActuel={r.creneau_debut}
             creneauxProposes={r.creneaux_proposes?.map((c) => fmtDateHeure(c.debut)) ?? null} />
           )}
           {r.statut !== "supprimé" && (

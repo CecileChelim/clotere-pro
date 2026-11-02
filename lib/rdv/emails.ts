@@ -136,6 +136,18 @@ export const mails = {
       <p style="font-size:13px;color:#6b7280">L'invitation est jointe à cet email pour l'ajouter à votre agenda. Annulation possible jusqu'à 24 h avant depuis la page de suivi.</p>`),
   }),
 
+  /** Client — rendez-vous déplacé par le cabinet (avec son accord). */
+  deplaceClient: (r: RdvComplet, l: Liens, ancien: string) => ({
+    sujet: `Rendez-vous déplacé avec ${nomPro(r)} — ${fmtDateHeure(r.creneau_debut)}`,
+    html: layout(r, "Votre rendez-vous a été déplacé", `${bonjour(r.client_prenom, r.client_nom)}
+      <p>Comme convenu avec <strong>${esc(nomPro(r))}</strong>, votre rendez-vous du ${esc(fmtDateHeure(ancien))} est déplacé. Voici le nouveau créneau :</p>
+      ${recap(r)}
+      ${r.message_pro ? `<p style="margin-bottom:0"><strong>Message de ${esc(nomPro(r))} :</strong></p>${citation(r.message_pro)}` : ""}
+      ${r.mode === "visio" && r.visio_url ? `<p style="font-size:14px"><strong>Lien de la visioconférence :</strong><br><a href="${r.visio_url}" style="color:${ACCENT}">${esc(r.visio_url)}</a></p>` : ""}
+      ${bouton(l.suivi, "Voir mon rendez-vous")}
+      <p style="font-size:13px;color:#6b7280">La nouvelle invitation est jointe à cet email. Si l'ancien créneau figure encore dans votre agenda, pensez à le supprimer.</p>`),
+  }),
+
   /** Client — créneau refusé. */
   refuseClient: (r: RdvComplet, l: Liens) => ({
     sujet: `Votre demande de rendez-vous avec ${nomPro(r)}`,
