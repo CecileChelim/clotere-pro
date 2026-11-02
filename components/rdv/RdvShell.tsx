@@ -29,6 +29,7 @@ export function StatutBadge({ statut }: { statut: string }) {
     "refusé": ["Refusé", "bg-gray-100 text-gray-600 ring-gray-200"],
     "proposé": ["Nouveaux créneaux proposés", "bg-violet-50 text-violet-700 ring-violet-200"],
     "annulé": ["Annulé", "bg-gray-100 text-gray-600 ring-gray-200"],
+    "supprimé": ["Clôturé", "bg-gray-100 text-gray-600 ring-gray-200"],
   };
   const [label, cls] = map[statut] ?? [statut, "bg-gray-100 text-gray-600 ring-gray-200"];
   return <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${cls}`}><span className="h-1.5 w-1.5 rounded-full bg-current" />{label}</span>;

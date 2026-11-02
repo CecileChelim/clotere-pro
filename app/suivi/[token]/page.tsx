@@ -22,6 +22,7 @@ const TITRES: Record<string, string> = {
   "refusé": "Ce créneau n'est pas disponible",
   "proposé": "De nouveaux créneaux vous sont proposés",
   "annulé": "Ce rendez-vous est annulé",
+  "supprimé": "Ce rendez-vous est clôturé",
 };
 
 export default async function SuiviPage({ params }: { params: Promise<{ token: string }> }) {
@@ -39,7 +40,7 @@ export default async function SuiviPage({ params }: { params: Promise<{ token: s
       <div className="mt-6 overflow-hidden rounded-3xl border border-gray-200 bg-white">
         {/* Rendez-vous */}
         <div className="flex items-start gap-5 p-6">
-          <DateTile iso={r.creneau_debut} muted={["refusé", "annulé"].includes(r.statut)} />
+          <DateTile iso={r.creneau_debut} muted={["refusé", "annulé", "supprimé"].includes(r.statut)} />
           <div className="min-w-0 flex-1 pt-1">
             <span className="inline-block rounded-lg bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700 ring-1 ring-violet-100">
               {libelleMotif(r).replace(/^(1ère|Première) consultation – /, "")}

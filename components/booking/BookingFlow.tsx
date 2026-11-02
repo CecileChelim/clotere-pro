@@ -210,11 +210,23 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false }: { p
             </div>
             {pro.rating && (
               <a href={pro.reviewsUrl || `https://www.google.com/search?q=${encodeURIComponent(`${cabinetNom} ${pro.adresse ?? ""} avis`)}`}
-                target="_blank" rel="noopener noreferrer" className="group mt-2 inline-flex flex-wrap items-center gap-1 text-[13px] text-gray-500">
-                <svg viewBox="0 0 20 20" className="h-3.5 w-3.5 text-amber-400" fill="currentColor" aria-hidden><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.8l-5.2 2.8 1-5.8L1.5 7.7l5.9-.9L10 1.5z" /></svg>
-                <span className="font-semibold text-gray-900">{pro.rating.toFixed(1).replace(".", ",")}</span>
-                {pro.reviews ? <span>· {pro.reviews} avis Google</span> : null}
-                <span className="font-medium text-violet-600 group-hover:underline">· Lire les avis ›</span>
+                target="_blank" rel="noopener noreferrer"
+                className="group mt-3 inline-flex items-center gap-2 self-start rounded-xl bg-white px-3 py-2 ring-1 ring-gray-200 transition hover:ring-gray-300">
+                <span className="flex" aria-label={`Note Google ${pro.rating.toFixed(1).replace(".", ",")} sur 5`}>
+                  {[0, 1, 2, 3, 4].map((i) => {
+                    const rempli = Math.min(1, Math.max(0, pro.rating! - i));
+                    return (
+                      <span key={i} className="relative h-4 w-4">
+                        <svg viewBox="0 0 20 20" className="absolute inset-0 h-4 w-4 text-gray-200" fill="currentColor" aria-hidden><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.8l-5.2 2.8 1-5.8L1.5 7.7l5.9-.9L10 1.5z" /></svg>
+                        <span className="absolute inset-0 overflow-hidden" style={{ width: `${rempli * 100}%` }}>
+                          <svg viewBox="0 0 20 20" className="h-4 w-4 text-amber-400" fill="currentColor" aria-hidden><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.8l-5.2 2.8 1-5.8L1.5 7.7l5.9-.9L10 1.5z" /></svg>
+                        </span>
+                      </span>
+                    );
+                  })}
+                </span>
+                <span className="text-sm font-bold text-gray-900">{pro.rating.toFixed(1).replace(".", ",")}</span>
+                <span className="text-sm font-semibold text-violet-600 group-hover:underline">{pro.reviews ? `${pro.reviews} avis Google` : "Avis Google"} ›</span>
               </a>
             )}
 

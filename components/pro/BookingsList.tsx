@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { DateTile } from "@/components/rdv/DateTile";
+import { SupprimerRdv } from "@/components/rdv/SupprimerRdv";
 
 export type Booking = {
   id: string; statut: string; creneau_debut: string; creneau_fin: string; mode: string | null; type_rdv: string;
@@ -23,9 +24,10 @@ const STATUT: Record<string, { label: string; cls: string }> = {
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
 const fmtHeure = (iso: string) => new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 
-export function BookingsList({ initial, profession = "avocat" }: { initial: Booking[]; profession?: string }) {
+export function BookingsList({ initial, profession = "avocat", avisPossible = false }: { initial: Booking[]; profession?: string; avisPossible?: boolean }) {
   const metier = profession === "comptable" ? "d'expert-comptable" : "d'avocat";
-  const items = initial;
+  const [items, setItems] = useState(initial);
+  const [flash, setFlash] = useState("");
   const [tab, setTab] = useState<"a_venir" | "a_valider" | "passes">("a_venir");
 
   const now = Date.now();
@@ -51,6 +53,8 @@ export function BookingsList({ initial, profession = "avocat" }: { initial: Book
           </button>
         ))}
       </div>
+
+      {flash && <p className="mt-6 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 ring-1 ring-emerald-200">{flash}</p>}
 
       {list.length === 0 ? (
         <div className="card mt-6 p-10 text-center text-sm text-gray-500">
@@ -103,11 +107,16 @@ export function BookingsList({ initial, profession = "avocat" }: { initial: Book
                   <p className="text-sm text-gray-500">
                     {b.statut === "demandé" ? "En attente de votre réponse" : b.statut === "proposé" ? "En attente du choix du client" : b.statut === "confirmé" ? "Confirmation envoyée au client" : ""}
                   </p>
+                  <div className="flex items-center gap-1">
+                  <SupprimerRdv token={b.token_pro} clientPrenom={b.client_prenom || b.client_nom} avisPossible={avisPossible}
+                    aVenirConfirme={b.statut === "confirmé" && futur(b)}
+                    onDone={(avis) => { setItems((l) => l.filter((x) => x.id !== b.id)); setFlash(avis ? `✓ Rendez-vous supprimé. ${b.client_prenom || b.client_nom} a reçu votre demande d'avis Google.` : "✓ Rendez-vous supprimé."); }} />
                   <a href={`/gestion/${b.token_pro}`} target="_blank" rel="noopener noreferrer"
                     className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition ${b.statut === "demandé" ? "bg-gray-950 text-white hover:bg-gray-800" : "bg-white text-gray-950 ring-1 ring-black/15 hover:bg-gray-50"}`}>
                     {b.statut === "demandé" ? "Répondre à la demande" : "Voir le rendez-vous"}
                     <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5"><path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" /><path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" /></svg>
                   </a>
+                  </div>
                 </div>
               </li>
             );

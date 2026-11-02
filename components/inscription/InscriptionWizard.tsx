@@ -113,6 +113,7 @@ export function InscriptionWizard({ profession, userId, userEmail, taxo, initial
 
     if (step === "presence") {
       if (cabinetId) await supabase.from("cabinets").update({ site_web: url(web.site), google_business_url: url(web.google), google_reviews_url: url(web.google) }).eq("id", cabinetId);
+      if (cabinetId && web.google) fetch("/api/google/sync", { method: "POST" }).catch(() => {});
       await supabase.from("professionals").update({ linkedin_url: avecPrefixe(LINKEDIN_PREFIX, web.linkedin), onboarding_step: "expertise" }).eq("id", proId);
       fetch("/api/google/sync", { method: "POST" }).catch(() => {}); // note + avis Google, en arrière-plan
       setSaving(false); setStep("expertise"); return;

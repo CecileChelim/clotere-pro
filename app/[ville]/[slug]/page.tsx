@@ -16,7 +16,7 @@ async function charger(slug: string) {
   const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
   const { data: pro, error } = await db
     .from("professionals")
-    .select("id, prenom, nom, photo_url, bio, profession, ville, telephone, domaines, linkedin_url, honoraires_modes, paiement_moyens, services, cabinets(id, nom, adresse, code_postal, ville, site_web, telephone, google_rating, google_reviews_count, google_reviews_url, google_business_url, google_reviews, google_synced_at, trial_ends_at, subscription_status)")
+    .select("id, prenom, nom, photo_url, bio, profession, ville, telephone, domaines, linkedin_url, honoraires_modes, paiement_moyens, services, cabinets(id, nom, adresse, code_postal, ville, site_web, telephone, google_rating, google_reviews_count, google_reviews_url, google_business_url, google_reviews, google_synced_at, google_place_id, google_place_url, trial_ends_at, subscription_status)")
     .eq("slug", slug)
     .maybeSingle();
   if (error) console.error("[page rdv] erreur Supabase :", error.message);
@@ -50,7 +50,10 @@ export default async function BookingPage({ params }: Params) {
 
   const cab = Array.isArray(d.pro.cabinets) ? d.pro.cabinets[0] : d.pro.cabinets;
   // Note et avis Google rafraîchis en arrière-plan au plus une fois par semaine.
-  if (cab?.id && (!cab.google_synced_at || Date.now() - new Date(cab.google_synced_at).getTime() > 7 * 24 * 3600e3)) {
+  const ilYa = cab?.google_synced_at ? Date.now() - new Date(cab.google_synced_at).getTime() : Infinity;
+  // Rafraîchi chaque semaine, ou tout de suite (max. toutes les 10 min) si le lien de fiche Google a changé.
+  const ficheChangee = !!cab?.google_business_url && cab.google_business_url !== cab.google_place_url;
+  if (cab?.id && (ilYa > 7 * 24 * 3600e3 || (ficheChangee && ilYa > 10 * 60e3))) {
     after(() => synchroniserGoogle(cab.id).then((r) => { if (!r.ok) console.warn("[google]", r.raison); }));
   }
   console.log("[page rdv] cabinet :", JSON.stringify(cab));
