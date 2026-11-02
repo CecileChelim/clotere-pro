@@ -1,6 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { PROFESSIONS } from "@/lib/professions-config";
+import { adresseClotere, adresseMetier } from "@/lib/expediteur";
 
 /* E-mails liés au compte du cabinet (abonnement, visibilité), hors rendez-vous. */
 
@@ -36,7 +37,8 @@ export async function envoyerMailCompte(t: Titulaire, sujet: string, html: strin
         method: "POST",
         headers: { "api-key": key, "Content-Type": "application/json", accept: "application/json" },
         body: JSON.stringify({
-          sender: { name: PROFESSIONS[t.profession === "comptable" ? "comptable" : "avocat"].brand, email: process.env.EMAIL_FROM || "contact@clotere.fr" },
+          sender: { name: PROFESSIONS[t.profession === "comptable" ? "comptable" : "avocat"].brand, email: adresseMetier(t.profession) },
+          replyTo: { email: adresseClotere(), name: "Clotere" },
           to: [{ email: t.email }], subject: sujet, htmlContent: html,
         }),
       });
@@ -61,7 +63,7 @@ export async function prevenirClotere(sujet: string, html: string) {
     await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: { "api-key": key, "Content-Type": "application/json", accept: "application/json" },
-      body: JSON.stringify({ sender: { name: "Clotere", email: process.env.EMAIL_FROM || "contact@clotere.fr" }, to: [{ email: to }], subject: sujet, htmlContent: html }),
+      body: JSON.stringify({ sender: { name: "Clotere", email: process.env.EMAIL_FROM_ALERTES || "contact@clotere.fr" }, to: [{ email: to }], subject: sujet, htmlContent: html }),
     });
   } catch (e) { console.error("[admin]", e); }
 }
