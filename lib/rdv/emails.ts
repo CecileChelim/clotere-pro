@@ -56,15 +56,18 @@ function bouton(href: string, label: string, secondaire = false) {
     secondaire ? "background:#ffffff;color:#111827;border:1px solid #d1d5db" : "background:${ACCENT};color:#ffffff"}">${label}</a>`;
 }
 
-function recap(r: RdvComplet, debut = r.creneau_debut) {
-  const lignes = [
+function recap(r: RdvComplet, debut = r.creneau_debut, client = false) {
+  const lignes: [string, string, string?][] = [
     ["Date", fmtDateHeure(debut)],
     ["Format", MODE_LABEL[r.mode ?? r.type_rdv] ?? r.type_rdv],
     ["Motif", libelleMotif(r)],
-    ...(r.mode === "cabinet" && adresseCabinet(r) ? [["Adresse", adresseCabinet(r)]] : []),
+    ...(r.mode === "cabinet" && adresseCabinet(r) ? [["Adresse", adresseCabinet(r)] as [string, string]] : []),
+    // Coordonnées du client, cliquables (e-mails envoyés au pro uniquement)
+    ...(client ? [["Coordonnées", "", `<a href="mailto:${esc(r.client_email)}" style="color:#111827;text-decoration:none">${esc(r.client_email)}</a>${r.client_tel
+      ? `<br><a href="tel:${esc(r.client_tel.replace(/\s/g, ""))}" style="color:#111827;text-decoration:none">${esc(r.client_tel)}</a>` : ""}`] as [string, string, string]] : []),
   ];
   return `<table role="presentation" style="width:100%;border-collapse:collapse;margin:18px 0;background:#f5f3ff;border-radius:12px">
-    ${lignes.map(([k, v]) => `<tr><td style="padding:10px 16px;color:#6b7280;font-size:14px;width:90px">${k}</td><td style="padding:10px 16px;color:#111827;font-size:14px;font-weight:600">${esc(v)}</td></tr>`).join("")}
+    ${lignes.map(([k, v, html]) => `<tr><td style="padding:10px 16px;color:#6b7280;font-size:14px;width:90px;vertical-align:top">${k}</td><td style="padding:10px 16px;color:#111827;font-size:14px;font-weight:600">${html ?? esc(v)}</td></tr>`).join("")}
   </table>`;
 }
 
@@ -111,10 +114,9 @@ export const mails = {
   demandePro: (r: RdvComplet, l: Liens) => ({
     sujet: `Nouvelle demande de rendez-vous : ${nomClient(r)} — ${fmtDateHeure(r.creneau_debut)}`,
     html: layout(r, "Nouvelle demande de rendez-vous", `<p><strong>${esc(nomClient(r))}</strong> souhaite un rendez-vous${r.suivi_existant ? " (client existant)" : ""}.</p>
-      ${recap(r)}
+      ${recap(r, r.creneau_debut, true)}
       ${r.deja_avocat ? `<p style="font-size:14px"><strong>Déjà un ${r.pro.profession === "avocat" ? "avocat" : "expert-comptable"} ?</strong> ${esc({ non: "Non, pas encore", oui: "Oui", changer: "Oui, mais souhaite en changer" }[r.deja_avocat] ?? r.deja_avocat)}</p>` : ""}
       ${r.message ? citation(r.message) : ""}
-      <p style="font-size:14px">${esc(r.client_email)}${r.client_tel ? ` · ${esc(r.client_tel)}` : ""}</p>
       ${bouton(l.gerer, "Gérer la demande")}
       <p style="font-size:13px;color:#6b7280">Validez, refusez ou proposez d'autres créneaux en un clic, sans vous connecter.</p>`),
   }),
@@ -159,7 +161,7 @@ export const mails = {
   choixPro: (r: RdvComplet, l: Liens) => ({
     sujet: `${nomClient(r)} a choisi un créneau — ${fmtDateHeure(r.creneau_debut)}`,
     html: layout(r, "Rendez-vous confirmé", `<p><strong>${esc(nomClient(r))}</strong> a choisi l'un des créneaux que vous avez proposés. Le rendez-vous est confirmé.</p>
-      ${recap(r)}${bouton(l.gerer, "Voir le rendez-vous")}`),
+      ${recap(r, r.creneau_debut, true)}${bouton(l.gerer, "Voir le rendez-vous")}`),
   }),
 
   /** Annulation — envoyé à l'autre partie. */
@@ -176,14 +178,14 @@ export const mails = {
     sujet: `Annulation : ${nomClient(r)} — ${fmtDateHeure(r.creneau_debut)}`,
     html: layout(r, "Un client a annulé son rendez-vous", `<p><strong>${esc(nomClient(r))}</strong> a annulé son rendez-vous. Le créneau est de nouveau disponible.</p>
       ${r.annulation_raison ? `<p style="font-size:14px"><strong>Raison :</strong> ${esc(({ plus_besoin: "N'en a plus besoin", imprevu: "Un imprévu", autre_pro: "A trouvé quelqu'un d'autre", autre: "Autre raison" } as Record<string, string>)[r.annulation_raison] ?? r.annulation_raison)}</p>` : ""}
-      ${recap(r)}${bouton(l.gerer, "Voir la demande", true)}`),
+      ${recap(r, r.creneau_debut, true)}${bouton(l.gerer, "Voir la demande", true)}`),
   }),
 
   /** Pro — relance (demande sans réponse depuis 24 h). */
   relancePro: (r: RdvComplet, l: Liens) => ({
     sujet: `Rappel : ${nomClient(r)} attend votre réponse`,
     html: layout(r, "Une demande attend votre réponse", `<p>La demande de <strong>${esc(nomClient(r))}</strong> n'a pas encore été traitée. Sans réponse sous 48 h, elle sera automatiquement annulée.</p>
-      ${recap(r)}${bouton(l.gerer, "Gérer la demande")}`),
+      ${recap(r, r.creneau_debut, true)}${bouton(l.gerer, "Gérer la demande")}`),
   }),
 
   /** Rappel la veille. */
@@ -193,7 +195,7 @@ export const mails = {
   }),
   rappelPro: (r: RdvComplet, l: Liens) => ({
     sujet: `Demain : ${nomClient(r)} — ${fmtDateHeure(r.creneau_debut)}`,
-    html: layout(r, "Rendez-vous de demain", `<p>Rendez-vous avec <strong>${esc(nomClient(r))}</strong>.</p>${recap(r)}${r.message ? citation(r.message) : ""}${bouton(l.gerer, "Voir le rendez-vous", true)}`),
+    html: layout(r, "Rendez-vous de demain", `<p>Rendez-vous avec <strong>${esc(nomClient(r))}</strong>.</p>${recap(r, r.creneau_debut, true)}${r.message ? citation(r.message) : ""}${bouton(l.gerer, "Voir le rendez-vous", true)}`),
   }),
 };
 
