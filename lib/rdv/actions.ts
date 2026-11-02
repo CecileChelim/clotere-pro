@@ -125,6 +125,31 @@ export async function annulerParPro(r: RdvComplet, message: string | null, base:
   return n;
 }
 
+/** Déplacement par le pro, avec l'accord du client (ex. au téléphone) : le nouveau créneau est
+ *  appliqué directement, sans confirmation du client. Même durée ; l'agenda du pro est mis à jour,
+ *  le client reçoit la nouvelle date avec l'invitation (même UID : son agenda déplace l'événement). */
+export async function deplacer(r: RdvComplet, debut: unknown, message: string | null, base: string) {
+  if (!["demandé", "proposé", "confirmé"].includes(r.statut)) throw new ErreurRdv("Ce rendez-vous ne peut plus être déplacé");
+  const d = new Date(String(debut ?? ""));
+  if (isNaN(d.getTime())) throw new ErreurRdv("Indiquez la nouvelle date et l'heure");
+  if (d.getTime() < Date.now()) throw new ErreurRdv("Ce créneau est passé");
+  const duree = new Date(r.creneau_fin).getTime() - new Date(r.creneau_debut).getTime();
+  const ancien = r.creneau_debut;
+  if (r.agenda_event_id) await supprimerEvenement(r.pro.id, r.agenda_event_id);
+  const n = await versAgenda(await maj(r.id, {
+    statut: "confirmé", creneau_debut: d.toISOString(), creneau_fin: new Date(d.getTime() + duree).toISOString(),
+    creneaux_proposes: null, agenda_event_id: null, visio_url: null, rappel_envoye_at: null,
+    message_pro: message?.trim() || null, traite_at: new Date().toISOString(),
+  }));
+  await envoyer({ to: n.client_email, type: "deplace_client", rdv: n, ics: invitation(n), ...mails.deplaceClient(n, liens(n, base), ancien) });
+  await notifierSlack(r.pro.profession, `🔁 Rendez-vous déplacé par le cabinet : ${r.pro.cabinet?.nom || nomPro(r)}`, [
+    ["Client", nomClient(r)],
+    ["Ancien créneau", new Date(ancien).toLocaleString("fr-FR", { timeZone: "Europe/Paris", dateStyle: "medium", timeStyle: "short" })],
+    ["Nouveau créneau", new Date(n.creneau_debut).toLocaleString("fr-FR", { timeZone: "Europe/Paris", dateStyle: "medium", timeStyle: "short" })],
+  ]);
+  return n;
+}
+
 /** Suppression par le pro : le rendez-vous sort de ses listes mais reste en base (statistiques).
  *  Dossier mené à bien → possibilité d'envoyer une demande d'avis Google au client. */
 export async function supprimerParPro(r: RdvComplet, raison: unknown, detail: string | null, demanderAvis: boolean) {

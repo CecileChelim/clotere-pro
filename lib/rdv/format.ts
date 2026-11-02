@@ -22,7 +22,8 @@ export function ics({ uid, debut, fin, titre, lieu, description }: { uid: string
   const esc = (s = "") => s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
   return [
     "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Clotere//RDV//FR", "METHOD:PUBLISH",
-    "BEGIN:VEVENT", `UID:${uid}@clotere.fr`, `DTSTAMP:${d(new Date().toISOString())}`,
+    // SEQUENCE croissante : un rendez-vous déplacé (même UID) remplace l'ancien dans les agendas qui le gèrent
+    "BEGIN:VEVENT", `UID:${uid}@clotere.fr`, `SEQUENCE:${Math.floor(Date.now() / 1000)}`, `DTSTAMP:${d(new Date().toISOString())}`,
     `DTSTART:${d(debut)}`, `DTEND:${d(fin)}`, `SUMMARY:${esc(titre)}`,
     lieu ? `LOCATION:${esc(lieu)}` : "", description ? `DESCRIPTION:${esc(description)}` : "",
     "END:VEVENT", "END:VCALENDAR",
