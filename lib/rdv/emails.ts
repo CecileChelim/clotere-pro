@@ -1,6 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fmtDateHeure, MODE_LABEL } from "./format";
+import { adresseClotere, adresseMetier, nomViaClotere } from "@/lib/expediteur";
 import { adresseCabinet, libelleMotif, marque, nomClient, nomPro, type RdvComplet } from "./load";
 
 /* ------------------------------------------------------------------ */
@@ -13,13 +14,16 @@ export async function envoyer({ to, sujet, html, type, rdv, ics }: Envoi) {
   let envoye = false;
   let erreur: string | null = null;
   const key = process.env.BREVO_API_KEY;
+  const versClient = to.toLowerCase() !== (rdv.pro.email ?? "").toLowerCase();
   if (key) {
     try {
       const res = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
         headers: { "api-key": key, "Content-Type": "application/json", accept: "application/json" },
         body: JSON.stringify({
-          sender: { name: process.env.EMAIL_FROM_NAME || marque(rdv), email: process.env.EMAIL_FROM || "contact@clotere.fr" },
+          // Client : « Cabinet X via Clotere », réponses au pro. Pro : marque du métier, réponses à Clotere.
+          sender: { name: versClient ? nomViaClotere(rdv.pro.cabinet?.nom || nomPro(rdv)) : marque(rdv), email: adresseMetier(rdv.pro.profession) },
+          replyTo: versClient ? { email: rdv.pro.email, name: nomPro(rdv) } : { email: adresseClotere(), name: "Clotere" },
           to: [{ email: to }],
           subject: sujet,
           htmlContent: html,
