@@ -12,7 +12,7 @@ export type Titulaire = { id: string; email: string; prenom: string | null; prof
 export function pageMail(profession: string, titre: string, corps: string, cta: { href: string; label: string }) {
   const accent = profession === "comptable" ? "#146c43" : "#7c3aed";
   const brand = PROFESSIONS[profession === "comptable" ? "comptable" : "avocat"].brand;
-  return `<!doctype html><html lang="fr"><body style="margin:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+  const html = `<!doctype html><html lang="fr"><body style="margin:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
   <table role="presentation" width="100%" style="background:#f3f4f6;padding:32px 12px"><tr><td align="center">
     <table role="presentation" width="100%" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden">
       <tr><td style="height:4px;background:${accent}"></td></tr>
@@ -25,6 +25,8 @@ export function pageMail(profession: string, titre: string, corps: string, cta: 
     </table>
     <p style="max-width:560px;margin:16px auto 0;color:#9ca3af;font-size:12px;text-align:center">${esc(brand)} · Clotere SAS</p>
   </td></tr></table></body></html>`;
+  // Les fragments sont écrits en violet ; on les passe en vert pour les experts-comptables.
+  return profession === "comptable" ? html.replaceAll("#7c3aed", "#146c43").replaceAll("#f5f3ff", "#eef6f1") : html;
 }
 
 export async function envoyerMailCompte(t: Titulaire, sujet: string, html: string, type: string) {
