@@ -188,6 +188,16 @@ export const mails = {
       ${recap(r, r.creneau_debut, true)}${bouton(l.gerer, "Gérer la demande")}`),
   }),
 
+  /** Client — demande d'avis Google après un dossier mené à bien. */
+  avisClient: (r: RdvComplet, lienAvis: string) => ({
+    sujet: `Votre avis compte pour ${r.pro.cabinet?.nom || nomPro(r)}`,
+    html: layout(r, "Merci pour votre confiance", `${bonjour(r.client_prenom, r.client_nom)}
+      <p>Votre dossier avec ${esc(nomPro(r))} est terminé. Merci de lui avoir fait confiance.</p>
+      <p>Si vous avez une minute, votre avis sur Google aide d'autres personnes à trouver le bon interlocuteur. Il suffit de quelques mots.</p>
+      ${bouton(lienAvis, "Laisser un avis sur Google")}
+      <p style="font-size:13px;color:#6b7280">Une question sur votre dossier ? Répondez simplement à cet e-mail.</p>`),
+  }),
+
   /** Rappel la veille. */
   rappelClient: (r: RdvComplet, l: Liens) => ({
     sujet: `Rappel : votre rendez-vous demain avec ${nomPro(r)}`,

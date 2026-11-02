@@ -11,14 +11,14 @@ export type RdvComplet = {
   motif: { libelle: string; duree_min: number; domaine_id: string | null } | null;
   pro: {
     id: string; prenom: string; nom: string; email: string; slug: string; telephone: string | null; profession: Profession; photo_url: string | null;
-    cabinet: { nom: string; adresse: string | null; code_postal: string | null; ville: string | null; telephone: string | null } | null;
+    cabinet: { nom: string; adresse: string | null; code_postal: string | null; ville: string | null; telephone: string | null; google_place_id: string | null; google_business_url: string | null; google_reviews_url: string | null } | null;
   };
 };
 
 const SELECT = `id, statut, creneau_debut, creneau_fin, mode, type_rdv, client_nom, client_prenom, client_email, client_tel, message,
   suivi_existant, deja_avocat, source, message_pro, creneaux_proposes, token_pro, token_client, created_at, annule_par, annulation_raison, agenda_event_id, visio_url,
   motif:motifs(libelle, duree_min, domaine_id),
-  pro:professionals(id, prenom, nom, email, slug, telephone, profession, photo_url, cabinet:cabinets(nom, adresse, code_postal, ville, telephone))`;
+  pro:professionals(id, prenom, nom, email, slug, telephone, profession, photo_url, cabinet:cabinets(nom, adresse, code_postal, ville, telephone, google_place_id, google_business_url, google_reviews_url))`;
 
 const one = <T,>(x: T | T[] | null): T | null => (Array.isArray(x) ? x[0] ?? null : x);
 

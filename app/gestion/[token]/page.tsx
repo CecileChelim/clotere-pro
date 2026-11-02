@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { GererRdv } from "@/components/rdv/GererRdv";
+import { SupprimerRdv } from "@/components/rdv/SupprimerRdv";
+import { lienAvisGoogle } from "@/lib/google";
 import { RdvShell, StatutBadge } from "@/components/rdv/RdvShell";
 import { DateTile } from "@/components/rdv/DateTile";
 import { fmtDateHeure, MODE_LABEL } from "@/lib/rdv/format";
@@ -78,6 +80,7 @@ export default async function GestionPage({ params }: { params: Promise<{ token:
 
         {/* Actions */}
         <div className="rounded-b-3xl border-t border-gray-100 bg-gray-50/70 px-6 py-5">
+          {r.statut === "supprimé" && <p className="text-sm text-gray-600">Vous avez supprimé ce rendez-vous. Il n&apos;apparaît plus dans votre liste.</p>}
           {r.statut === "refusé" && <p className="text-sm text-gray-600">Vous avez refusé cette demande. Le client a reçu un lien pour choisir un autre créneau.</p>}
           {r.statut === "annulé" && <p className="text-sm text-gray-600">Ce rendez-vous a été annulé{r.annule_par === "client" ? ` par le client${r.annulation_raison ? ` (${({ plus_besoin: "n'en a plus besoin", imprevu: "imprévu", autre_pro: "a trouvé quelqu'un d'autre", autre: "autre raison" } as Record<string, string>)[r.annulation_raison] ?? r.annulation_raison})` : ""}` : r.annule_par === "auto" ? " automatiquement (sans réponse sous 72 h)" : ""}.</p>}
           {r.statut === "confirmé" ? (
@@ -85,9 +88,15 @@ export default async function GestionPage({ params }: { params: Promise<{ token:
               <p className="text-sm text-gray-600">✓ Le client a reçu la confirmation{r.message_pro ? " avec votre message" : ""} et l&apos;invitation agenda.</p>
               <GererRdv token={token} statut={r.statut} modele={messageModele(r)} modeleRefus={messageRefusModele(r)} creneauxProposes={null} />
             </div>
-          ) : (
+          ) : r.statut !== "supprimé" && (
           <GererRdv token={token} statut={r.statut} modele={messageModele(r)} modeleRefus={messageRefusModele(r)}
             creneauxProposes={r.creneaux_proposes?.map((c) => fmtDateHeure(c.debut)) ?? null} />
+          )}
+          {r.statut !== "supprimé" && (
+            <div className="mt-4 flex justify-end border-t border-gray-200/70 pt-3">
+              <SupprimerRdv token={token} clientPrenom={r.client_prenom || r.client_nom} avisPossible={!!lienAvisGoogle(r.pro.cabinet)}
+                aVenirConfirme={r.statut === "confirmé" && new Date(r.creneau_debut).getTime() > Date.now()} />
+            </div>
           )}
         </div>
       </div>

@@ -1,3 +1,4 @@
+import { lienAvisGoogle } from "@/lib/google";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { LienResa } from "@/components/dashboard/LienResa";
@@ -13,13 +14,14 @@ export default async function DashboardPage() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase as any;
-  const { data: pro } = await db.from("professionals").select("id, prenom, slug, profession, google_calendar_connected").eq("auth_user_id", user.id).maybeSingle();
+  const { data: pro } = await db.from("professionals").select("id, prenom, slug, profession, google_calendar_connected, cabinet:cabinets(google_place_id, google_business_url, google_reviews_url)").eq("auth_user_id", user.id).maybeSingle();
   if (!pro) redirect("/inscription");
 
   const { data, error } = await db
     .from("bookings")
     .select("id, statut, creneau_debut, creneau_fin, mode, type_rdv, client_nom, client_prenom, client_email, client_tel, message, suivi_existant, deja_avocat, created_at, token_pro, motifs(libelle, duree_min)")
     .eq("professional_id", pro.id)
+    .neq("statut", "supprimé")
     .order("creneau_debut", { ascending: true });
   if (error) console.error("[dashboard] erreur Supabase :", error.message);
   const bookings = (data ?? []) as Booking[];
@@ -59,7 +61,7 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      <BookingsList initial={bookings} profession={pro.profession} />
+      <BookingsList initial={bookings} profession={pro.profession} avisPossible={!!lienAvisGoogle(Array.isArray(pro.cabinet) ? pro.cabinet[0] : pro.cabinet)} />
 
       <MarketingPromoCard profession={pro.profession} />
     </div>

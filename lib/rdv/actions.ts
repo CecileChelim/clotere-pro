@@ -5,6 +5,8 @@ import { envoyer, liens, mails } from "./emails";
 import { adresseCabinet, libelleMotif, nomClient, nomPro, rdvParId, type RdvComplet } from "./load";
 import { etatAbonnement } from "@/lib/abonnement";
 import { notifierSlack } from "@/lib/slack";
+import { lienAvisGoogle } from "@/lib/google";
+import { estRaison, RAISONS_SUPPRESSION } from "./suppression";
 import { chevauche, creerEvenement, plagesIndisponibles, supprimerEvenement } from "@/lib/agenda";
 
 export class ErreurRdv extends Error {}
@@ -121,6 +123,33 @@ export async function annulerParPro(r: RdvComplet, message: string | null, base:
   if (r.agenda_event_id) await supprimerEvenement(r.pro.id, r.agenda_event_id);
   await envoyer({ to: n.client_email, type: "annule_client", rdv: n, ...mails.annuleClient(n, liens(n, base), "pro") });
   return n;
+}
+
+/** Suppression par le pro : le rendez-vous sort de ses listes mais reste en base (statistiques).
+ *  Dossier mené à bien → possibilité d'envoyer une demande d'avis Google au client. */
+export async function supprimerParPro(r: RdvComplet, raison: unknown, detail: string | null, demanderAvis: boolean) {
+  if (r.statut === "supprimé") throw new ErreurRdv("Ce rendez-vous est déjà supprimé");
+  if (!estRaison(raison)) throw new ErreurRdv("Choisissez une raison");
+  const aVenir = new Date(r.creneau_debut).getTime() > Date.now();
+  const n = await maj(r.id, {
+    statut: "supprimé", statut_avant_suppression: r.statut, supprime_le: new Date().toISOString(),
+    suppression_raison: raison, suppression_detail: detail?.trim().slice(0, 1000) || null,
+  });
+  // Libère le créneau dans l'agenda connecté si le rendez-vous n'a pas encore eu lieu.
+  if (r.agenda_event_id && aVenir) await supprimerEvenement(r.pro.id, r.agenda_event_id);
+
+  let avisEnvoye = false;
+  const lien = lienAvisGoogle(r.pro.cabinet);
+  if (demanderAvis && raison === "termine" && lien) {
+    await envoyer({ to: n.client_email, type: "avis_client", rdv: n, ...mails.avisClient(n, lien) });
+    await maj(r.id, { avis_demande_le: new Date().toISOString() });
+    avisEnvoye = true;
+  }
+  const label = RAISONS_SUPPRESSION.find((x) => x.id === raison)?.label ?? raison;
+  await notifierSlack(r.pro.profession, `🗂️ Rendez-vous clôturé : ${label}${avisEnvoye ? " · avis Google demandé" : ""}`, [
+    ["Cabinet", r.pro.cabinet?.nom || nomPro(r)], ["Client", nomClient(r)], ["Précision", detail?.trim() || null],
+  ]);
+  return { avisEnvoye };
 }
 
 /* ---------------- Actions du client ---------------- */

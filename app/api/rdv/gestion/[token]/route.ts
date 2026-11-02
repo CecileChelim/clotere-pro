@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { annulerParPro, baseUrl, ErreurRdv, proposer, refuser, valider } from "@/lib/rdv/actions";
+import { annulerParPro, baseUrl, ErreurRdv, proposer, refuser, supprimerParPro, valider } from "@/lib/rdv/actions";
 import { rdvParTokenPro } from "@/lib/rdv/load";
 
 // Actions de l'avocat depuis la page « Gérer la demande » (lien sans connexion).
@@ -15,6 +15,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     else if (b.action === "refuser") await refuser(r, message, base);
     else if (b.action === "proposer") await proposer(r, Array.isArray(b.creneaux) ? b.creneaux : [], message, base);
     else if (b.action === "annuler") await annulerParPro(r, message, base);
+    else if (b.action === "supprimer") {
+      const res = await supprimerParPro(r, b.raison, typeof b.detail === "string" ? b.detail : null, !!b.avis);
+      return NextResponse.json({ ok: true, ...res });
+    }
     else throw new ErreurRdv("Action inconnue");
     return NextResponse.json({ ok: true });
   } catch (e) {
