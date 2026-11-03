@@ -7,6 +7,7 @@ import { PROFESSIONS } from "@/lib/professions-config";
 import { MarketingPromoCard } from "@/components/dashboard/MarketingPromoCard";
 import { GardeAbonnement } from "@/components/dashboard/AbonnementActions";
 import { etatAbonnement } from "@/lib/abonnement";
+import { InscriptionTerminee } from "@/components/analytics/InscriptionTerminee";
 
 // La présence d'une session valide est déjà garantie par middleware.ts
 // (redirection vers /login sinon). On récupère ici le profil pro associé
@@ -37,6 +38,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="relative min-h-screen bg-white">
+      <InscriptionTerminee />
       <div className="bg-brand-gradient absolute inset-x-2 top-2 h-72 rounded-[2rem] ring-1 ring-black/5 ring-inset" />
       <div className="relative mx-auto max-w-7xl px-6">
         <header className="flex items-center justify-between gap-4 py-8">

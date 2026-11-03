@@ -3,6 +3,8 @@ import { Newsreader, Instrument_Sans } from "next/font/google";
 import "./globals.css";
 import { headers } from "next/headers";
 import { professionFromHost } from "@/lib/professions-config";
+import Script from "next/script";
+import { gaIdFromHost } from "@/lib/analytics";
 
 const newsreader = Newsreader({
   subsets: ["latin"],
@@ -57,9 +59,25 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const host = (await headers()).get("host");
+  const gaId = gaIdFromHost(host);
   return (
-    <html lang="fr" data-theme={professionFromHost((await headers()).get("host"))} className={`${newsreader.variable} ${instrumentSans.variable}`}>
-      <body className="antialiased">{children}</body>
+    <html lang="fr" data-theme={professionFromHost(host)} className={`${newsreader.variable} ${instrumentSans.variable}`}>
+      <body className="antialiased">
+        {children}
+        {gaId && (
+          <>
+            {/* Google tag (gtag.js) */}
+            <Script src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} strategy="afterInteractive" />
+            <Script id="google-tag" strategy="afterInteractive">
+              {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '${gaId}');`}
+            </Script>
+          </>
+        )}
+      </body>
     </html>
   );
 }
