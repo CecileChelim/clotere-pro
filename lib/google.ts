@@ -11,7 +11,7 @@ const norm = (s = "") => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(
 
 type Place = {
   id: string; displayName?: { text: string }; formattedAddress?: string; rating?: number; userRatingCount?: number; googleMapsUri?: string;
-  reviews?: { rating: number; relativePublishTimeDescription?: string; text?: { text: string }; originalText?: { text: string };
+  reviews?: { name?: string; publishTime?: string; rating: number; relativePublishTimeDescription?: string; text?: { text: string }; originalText?: { text: string };
     authorAttribution?: { displayName?: string; photoUri?: string } }[];
 };
 
@@ -84,6 +84,8 @@ export function lienAvisGoogle(c: { google_place_id?: string | null; google_busi
 }
 
 export type AvisGoogle = { auteur: string; photo: string | null; note: number; quand: string; texte: string };
+/** Avis tel que renvoyé par Places API (5 au maximum, sans les réponses du cabinet). */
+export type AvisPlaces = NonNullable<Place["reviews"]>[number];
 
 export async function synchroniserGoogle(cabinetId: string) {
   const key = KEY();
@@ -146,5 +148,5 @@ export async function synchroniserGoogle(cabinetId: string) {
     google_reviews: avis,
     google_synced_at: new Date().toISOString(),
   }).eq("id", cabinetId);
-  return { ok: true as const, note: match.rating, avis: match.userRatingCount };
+  return { ok: true as const, note: match.rating, avis: match.userRatingCount, reviews: match.reviews ?? [] };
 }

@@ -16,12 +16,19 @@ function Statut({ s }: { s: Article["statut"] }) {
   return <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${st.classe}`}>{st.label}</span>;
 }
 
-export default async function VisibilitePage({ searchParams }: { searchParams: Promise<{ onglet?: string }> }) {
-  const { onglet: o } = await searchParams;
+export default async function VisibilitePage({ searchParams }: { searchParams: Promise<{ onglet?: string; option?: string }> }) {
+  const { onglet: o, option } = await searchParams;
   const ctx = await cabinetConnecte();
   if (!ctx) redirect("/login?next=/dashboard/visibilite");
   const profession = ctx.pro.profession === "comptable" ? "comptable" : "avocat";
-  if (!ctx.cab.offre_visibilite) return <VisibilitePresentation profession={profession} demandeEnvoyee={!!ctx.cab.visibilite_demande_at} cabinet={ctx.cab.nom} ville={ctx.cab.ville} />;
+  if (!ctx.cab.offre_visibilite) {
+    return (
+      <>
+        {option === "ok" && <div className="mb-6 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800 ring-1 ring-emerald-200">Paiement reçu, merci ! L&apos;activation prend quelques secondes : rafraîchissez la page si elle ne s&apos;affiche pas.</div>}
+        <VisibilitePresentation profession={profession} demandeEnvoyee={!!ctx.cab.visibilite_demande_at} cabinet={ctx.cab.nom} ville={ctx.cab.ville} />
+      </>
+    );
+  }
 
   const onglet = ONGLETS.some(([id]) => id === o) ? o! : "articles";
   const db = createAdminClient();

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { ActiverOption } from "@/components/options/ActiverOption";
+import { prixLabel } from "@/lib/options";
 
 const DEMO = "https://calendar.app.google/k2btydyaoysdvgTx6";
 
@@ -14,11 +15,22 @@ function Coche({ fonce = false }: { fonce?: boolean }) {
     );
 }
 
+function Ctas({ clair = false, demandeEnvoyee }: { clair?: boolean; demandeEnvoyee: boolean }) {
+  return (
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+      <a href={DEMO} target="_blank" rel="noopener noreferrer" className="rounded-full bg-gray-950 px-5 py-3 text-center text-sm font-medium text-white shadow-md hover:bg-gray-800">
+        Réserver une démo
+      </a>
+      {demandeEnvoyee && <span className="rounded-full bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 ring-1 ring-emerald-200">✓ Demande reçue : on vous rappelle sous 24 h</span>}
+      <ActiverOption option="visibilite" clair={clair} />
+    </div>
+  );
+}
+
 /** Page de vente de l'offre Visibilité, affichée aux cabinets qui ne l'ont pas encore. */
 export function VisibilitePresentation({ profession, demandeEnvoyee, cabinet, ville }: {
   profession: "avocat" | "comptable"; demandeEnvoyee: boolean; cabinet?: string | null; ville?: string | null;
 }) {
-  const [etat, setEtat] = useState<"idle" | "envoi" | "ok" | "erreur">(demandeEnvoyee ? "ok" : "idle");
   const comptable = profession === "comptable";
   const metier = comptable ? "expert-comptable" : "avocat";
   const v = ville || "Lyon";
@@ -28,29 +40,6 @@ export function VisibilitePresentation({ profession, demandeEnvoyee, cabinet, vi
   const articles = comptable
     ? ["SASU ou EURL : quel statut choisir ?", "Changer d'expert-comptable en cours d'année", "Les 5 erreurs comptables des créateurs"]
     : ["Rupture conventionnelle : les étapes et les délais", "Licenciement pour faute grave : quels recours ?", "Prud'hommes : combien de temps dure une procédure ?"];
-
-  async function activer() {
-    setEtat("envoi");
-    const r = await fetch("/api/visibilite/demande", { method: "POST" }).catch(() => null);
-    setEtat(r?.ok ? "ok" : "erreur");
-  }
-
-  const Ctas = ({ clair = false }: { clair?: boolean }) => (
-    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-      <a href={DEMO} target="_blank" rel="noopener noreferrer" className="rounded-full bg-gray-950 px-5 py-3 text-center text-sm font-medium text-white shadow-md hover:bg-gray-800">
-        Réserver une démo
-      </a>
-      {etat === "ok" ? (
-        <span className="rounded-full bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 ring-1 ring-emerald-200">✓ Demande envoyée : on vous rappelle sous 24 h</span>
-      ) : (
-        <button type="button" onClick={activer} disabled={etat === "envoi"}
-          className={`rounded-full px-5 py-3 text-sm font-medium text-gray-950 ring-1 disabled:opacity-50 ${clair ? "bg-white/40 ring-black/10 backdrop-blur hover:bg-white/60" : "bg-white ring-gray-300 hover:ring-gray-400"}`}>
-          {etat === "envoi" ? "Envoi…" : "Activer ce service"}
-        </button>
-      )}
-      {etat === "erreur" && <span className="text-sm text-red-600">Une erreur est survenue, réessayez.</span>}
-    </div>
-  );
 
   return (
     <div className="space-y-16">
@@ -67,7 +56,7 @@ export function VisibilitePresentation({ profession, demandeEnvoyee, cabinet, vi
               On fait monter votre cabinet sur Google pendant que vous {pendant} : des articles chaque mois, une fiche Google qui convertit,
               et des demandes de rendez-vous qui arrivent directement dans votre agenda.
             </p>
-            <div className="mt-7"><Ctas clair /></div>
+            <div className="mt-7"><Ctas clair demandeEnvoyee={demandeEnvoyee} /></div>
           </div>
 
           {/* Faux résultat Google personnalisé */}
@@ -211,9 +200,9 @@ export function VisibilitePresentation({ profession, demandeEnvoyee, cabinet, vi
           ].map((f) => <li key={f} className="flex gap-3"><Coche />{f}</li>)}
         </ul>
         <div className="flex flex-col justify-center">
-          <p className="text-lg font-medium text-gray-950">Le tarif est adapté à votre ville et à vos spécialités.</p>
-          <p className="mt-1 text-sm text-gray-600">On vous le présente pendant la démo, avec les requêtes sur lesquelles vous pouvez vous positionner.</p>
-          <div className="mt-5"><Ctas /></div>
+          <p className="text-3xl font-medium tracking-tight text-gray-950">300 €<span className="text-base font-normal text-gray-500"> HT / mois</span></p>
+          <p className="mt-1 text-sm text-gray-600">{prixLabel("visibilite")}. Sans engagement, résiliable à tout moment. Inclut l&apos;option Avis Google.</p>
+          <div className="mt-5"><Ctas demandeEnvoyee={demandeEnvoyee} /></div>
         </div>
       </div>
     </div>
