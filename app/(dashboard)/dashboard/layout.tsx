@@ -7,6 +7,7 @@ import { PROFESSIONS } from "@/lib/professions-config";
 import { MarketingPromoCard } from "@/components/dashboard/MarketingPromoCard";
 import { GardeAbonnement } from "@/components/dashboard/AbonnementActions";
 import { etatAbonnement } from "@/lib/abonnement";
+import { avisActif } from "@/lib/options";
 
 // La présence d'une session valide est déjà garantie par middleware.ts
 // (redirection vers /login sinon). On récupère ici le profil pro associé
@@ -32,6 +33,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: cab } = professional?.cabinet_id ? await (supabase as any).from("cabinets").select("*").eq("id", professional.cabinet_id).maybeSingle() : { data: null };
   const abo = etatAbonnement(cab);
+  const avis = avisActif(cab);
+  const { count: avisARepondre } = avis
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ? await (supabase as any).from("avis_google").select("id", { count: "exact", head: true }).eq("cabinet_id", cab.id).eq("statut", "a_repondre").is("reponse_google", null)
+    : { count: 0 };
 
   const brand = PROFESSIONS[professional?.profession === "comptable" ? "comptable" : "avocat"].brand;
 
@@ -56,7 +62,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
         <div className="mb-10 flex flex-col gap-8 rounded-[2rem] bg-white p-6 shadow-xl ring-1 ring-black/5 sm:p-10 lg:flex-row">
           <aside className="shrink-0 lg:w-56">
-            <DashboardNav visibilite={!!cab?.offre_visibilite} />
+            <DashboardNav visibilite={!!cab?.offre_visibilite} avis={avis} avisARepondre={avisARepondre ?? 0} />
             <div className="mt-6 hidden lg:block"><MarketingPromoCard compact profession={professional?.profession} /></div>
             <div className="mt-6 border-t border-gray-100 pt-4">
               <SignOutButton />

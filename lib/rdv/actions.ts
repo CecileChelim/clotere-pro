@@ -6,6 +6,7 @@ import { adresseCabinet, libelleMotif, nomClient, nomPro, rdvParId, type RdvComp
 import { etatAbonnement } from "@/lib/abonnement";
 import { notifierSlack } from "@/lib/slack";
 import { lienAvisGoogle } from "@/lib/google";
+import { creerDemandeAvis } from "@/lib/avis-serveur";
 import { estRaison, RAISONS_SUPPRESSION } from "./suppression";
 import { chevauche, creerEvenement, plagesIndisponibles, supprimerEvenement } from "@/lib/agenda";
 
@@ -169,6 +170,12 @@ export async function supprimerParPro(r: RdvComplet, raison: unknown, detail: st
     await envoyer({ to: n.client_email, type: "avis_client", rdv: n, ...mails.avisClient(n, lien) });
     await maj(r.id, { avis_demande_le: new Date().toISOString() });
     avisEnvoye = true;
+    // Suivi dans le menu « Avis » (relances automatiques si l'option est active).
+    const { data: p } = await createAdminClient().from("professionals").select("cabinet_id").eq("id", r.pro.id).maybeSingle();
+    if (p?.cabinet_id) {
+      await creerDemandeAvis({ cabinetId: p.cabinet_id, bookingId: r.id, clientNom: nomClient(n), clientEmail: n.client_email, dejaEnvoye: true })
+        .catch((e) => console.warn("[avis] suivi de la demande :", e instanceof Error ? e.message : e));
+    }
   }
   const label = RAISONS_SUPPRESSION.find((x) => x.id === raison)?.label ?? raison;
   await notifierSlack(r.pro.profession, `🗂️ Rendez-vous clôturé : ${label}${avisEnvoye ? " · avis Google demandé" : ""}`, [
