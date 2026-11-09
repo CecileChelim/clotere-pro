@@ -1,7 +1,8 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { PROFESSIONS } from "@/lib/professions-config";
-import { adresseClotere, adresseMetier } from "@/lib/expediteur";
+import { adresseClotere } from "@/lib/expediteur";
+import { envoyerMail } from "@/lib/envoi-mail";
 
 /* E-mails liés au compte du cabinet (abonnement, visibilité), hors rendez-vous. */
 
@@ -31,23 +32,11 @@ export function pageMail(profession: string, titre: string, corps: string, cta: 
 
 export async function envoyerMailCompte(t: Titulaire, sujet: string, html: string, type: string) {
   const db = createAdminClient();
-  let envoye = false, erreur: string | null = null;
-  const key = process.env.BREVO_API_KEY;
-  if (key) {
-    try {
-      const res = await fetch("https://api.brevo.com/v3/smtp/email", {
-        method: "POST",
-        headers: { "api-key": key, "Content-Type": "application/json", accept: "application/json" },
-        body: JSON.stringify({
-          sender: { name: PROFESSIONS[t.profession === "comptable" ? "comptable" : "avocat"].brand, email: adresseMetier(t.profession) },
-          replyTo: { email: adresseClotere(), name: "Clotere" },
-          to: [{ email: t.email }], subject: sujet, htmlContent: html,
-        }),
-      });
-      envoye = res.ok;
-      if (!res.ok) erreur = `Brevo ${res.status} : ${await res.text()}`;
-    } catch (e) { erreur = String(e); }
-  }
+  const { envoye, erreur } = await envoyerMail({
+    nomExpediteur: PROFESSIONS[t.profession === "comptable" ? "comptable" : "avocat"].brand,
+    replyTo: { email: adresseClotere(), name: "Clotere" },
+    to: t.email, sujet, html,
+  });
   await db.from("emails").insert({ booking_id: null, professional_id: t.id, destinataire: t.email, type, sujet, html, envoye, erreur });
   if (erreur) console.error("[email abonnement]", type, erreur);
 }
@@ -58,14 +47,7 @@ export const urlEspace = (profession: string | null) =>
 
 /** Prévient l'équipe Clotere (ADMIN_EMAIL, sinon contact@clotere.fr). */
 export async function prevenirClotere(sujet: string, html: string) {
-  const key = process.env.BREVO_API_KEY;
   const to = process.env.ADMIN_EMAIL || "contact@clotere.fr";
-  if (!key) { console.log("[admin]", sujet); return; }
-  try {
-    await fetch("https://api.brevo.com/v3/smtp/email", {
-      method: "POST",
-      headers: { "api-key": key, "Content-Type": "application/json", accept: "application/json" },
-      body: JSON.stringify({ sender: { name: "Clotere", email: process.env.EMAIL_FROM_ALERTES || "contact@clotere.fr" }, to: [{ email: to }], subject: sujet, htmlContent: html }),
-    });
-  } catch (e) { console.error("[admin]", e); }
+  const { erreur } = await envoyerMail({ nomExpediteur: "Clotere", to, sujet, html });
+  if (erreur) console.error("[admin]", erreur);
 }

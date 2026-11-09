@@ -1,4 +1,5 @@
-/* Adresses d'envoi des e-mails (domaine clotere.fr authentifié dans Brevo).
+/* Adresses liées aux e-mails. L'adresse d'envoi réelle est EMAIL_FROM (contact@clotere.fr), voir lib/envoi-mail.ts.
+   adresseMetier ne sert plus qu'en cas de retour à Brevo.
    - avocat@clotere.fr / comptable@clotere.fr selon le métier (modifiables via EMAIL_FROM_AVOCAT / EMAIL_FROM_COMPTABLE)
    - les réponses des pros arrivent chez Clotere (ADMIN_EMAIL, sinon contact@clotere.fr) */
 
