@@ -1,17 +1,18 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { blogPath, formatDate, readingMinutes, type BlogPost, type Heading } from "@/lib/blog-avocat";
+import { blogPath, formatDate, readingMinutes, type BlogPost, type Heading } from "@/lib/blog";
 import SiteNav from "../SiteNav";
+import type { LandingConfig } from "@/lib/landing-config";
 import { eyebrow } from "../styles";
 
 /** Header compact du blog : navigation + contenu sur le dégradé de la profession. */
-export function BlogHeader({ children }: { children: ReactNode }) {
+export function BlogHeader({ conf, children }: { conf: LandingConfig; children: ReactNode }) {
   return (
     <header
       className="flex w-full flex-col items-center gap-14 rounded-[40px] px-4 pb-16 pt-6 sm:px-8 sm:pt-8 lg:gap-20 lg:px-[104px] lg:pb-20"
       style={{ backgroundImage: "var(--brand-gradient)" }}
     >
-      <SiteNav />
+      <SiteNav conf={conf} />
       <div className="w-full max-w-[880px]">{children}</div>
     </header>
   );

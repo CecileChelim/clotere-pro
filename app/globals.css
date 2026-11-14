@@ -119,3 +119,11 @@ body {
 .lp details > summary::-webkit-details-marker {
   display: none;
 }
+
+/* Couleurs « Expert-comptable » des landings (comptable.clotere.fr) */
+[data-profession="comptable"] {
+  --brand: #146c43;
+  --brand-soft: #eef6f1;
+  --brand-section: #f7faf2;
+  --brand-gradient: linear-gradient(158deg, #fbf7e8 30.675%, #dcefa0 67.485%, #6fbf8f 93.777%);
+}

@@ -1,8 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { slugify } from "@/lib/blog-avocat";
-import { CTA_DEMO } from "@/lib/landing-avocat";
+import { slugify } from "@/lib/blog";
+import { CTA_DEMO, type ProfessionId } from "@/lib/landing-config";
 import {
   ApercuAgendaSemaine,
   ApercuAnnonceGoogle,
@@ -18,21 +18,29 @@ import { CtaLink } from "../ui";
 
 /* ── Visuels utilisables dans les articles ─────────────────────────────────── */
 
-const ILLUSTRATIONS: Record<string, ReactNode> = {
-  "fiche-google": <ApercuFicheGoogle />,
-  reservation: <ApercuReservation />,
-  "demande-qualifiee": <ApercuDemandeQualifiee />,
-  agenda: <ApercuAgendaSemaine />,
-  "reponse-ia": <ApercuReponseIA />,
-  article: <ApercuArticle />,
-  "editeur-site": <ApercuEditeurSite />,
-  rapport: <ApercuRapport titre="Rapport de visibilité · Octobre" />,
-  annonce: <ApercuAnnonceGoogle />,
-};
+function illustrations(p: ProfessionId): Record<string, ReactNode> {
+  return {
+    "fiche-google": <ApercuFicheGoogle p={p} />,
+    reservation: <ApercuReservation p={p} />,
+    "demande-qualifiee": <ApercuDemandeQualifiee p={p} />,
+    agenda: <ApercuAgendaSemaine p={p} />,
+    "reponse-ia": <ApercuReponseIA p={p} />,
+    article: <ApercuArticle p={p} />,
+    "editeur-site": <ApercuEditeurSite p={p} />,
+    rapport: <ApercuRapport titre="Rapport de visibilité · Octobre" />,
+    annonce: <ApercuAnnonceGoogle p={p} />,
+  };
+}
 
-const PHOTOS: Record<string, { src: string; alt: string }> = {
-  soir: { src: "/img/landing/photo-le-soir.png", alt: "Une personne cherche un avocat sur son téléphone, le soir, depuis son salon" },
-  cabinet: { src: "/img/landing/visuel-bureau.png", alt: "Le bureau d’un cabinet d’avocat, avec sa bibliothèque et sa table de rendez-vous" },
+const PHOTOS: Record<ProfessionId, Record<string, { src: string; alt: string }>> = {
+  avocat: {
+    soir: { src: "/img/landing/photo-le-soir.png", alt: "Une personne cherche un avocat sur son téléphone, le soir, depuis son salon" },
+    cabinet: { src: "/img/landing/visuel-bureau.png", alt: "Le bureau d’un cabinet d’avocat, avec sa bibliothèque et sa table de rendez-vous" },
+  },
+  comptable: {
+    soir: { src: "/img/landing/photo-le-soir.png", alt: "Un dirigeant cherche un expert-comptable sur son téléphone, le soir, depuis chez lui" },
+    cabinet: { src: "/img/landing/visuel-bureau.png", alt: "Le bureau d’un cabinet d’expertise comptable, avec sa bibliothèque et sa table de rendez-vous" },
+  },
 };
 
 function Caption({ children }: { children?: ReactNode }) {
@@ -91,7 +99,7 @@ function inline(text: string): ReactNode[] {
 
 /* ── Rendu des blocs ───────────────────────────────────────────────────────── */
 
-function renderBlock(block: string, key: number): ReactNode {
+function renderBlock(block: string, key: number, p: ProfessionId): ReactNode {
   const lines = block.split("\n").map((l) => l.trim());
   const first = lines[0];
 
@@ -114,7 +122,7 @@ function renderBlock(block: string, key: number): ReactNode {
   if (first === "::demo") return <CtaArticle key={key} />;
   if (first.startsWith("::illustration ")) {
     const [name, caption] = first.slice(15).split("|").map((s) => s.trim());
-    const visual = ILLUSTRATIONS[name];
+    const visual = illustrations(p)[name];
     if (!visual) return null;
     return (
       <figure key={key} className="my-10">
@@ -125,7 +133,7 @@ function renderBlock(block: string, key: number): ReactNode {
   }
   if (first.startsWith("::photo ")) {
     const [name, caption] = first.slice(8).split("|").map((s) => s.trim());
-    const photo = PHOTOS[name];
+    const photo = PHOTOS[p][name];
     if (!photo) return null;
     return (
       <figure key={key} className="my-10">
@@ -176,7 +184,7 @@ function renderBlock(block: string, key: number): ReactNode {
  * Corps d'un article. Un encart démo est inséré avant le H2 du milieu
  * (sauf si l'article contient déjà « ::demo »).
  */
-export default function ArticleBody({ body }: { body: string }) {
+export default function ArticleBody({ body, profession = "avocat" }: { body: string; profession?: ProfessionId }) {
   const blocks = body
     .trim()
     .split(/\n\s*\n/)
@@ -186,5 +194,5 @@ export default function ArticleBody({ body }: { body: string }) {
     const h2 = blocks.map((b, i) => (b.startsWith("## ") ? i : -1)).filter((i) => i >= 0);
     if (h2.length >= 2) blocks.splice(h2[Math.floor(h2.length / 2)], 0, "::demo");
   }
-  return <div>{blocks.map(renderBlock)}</div>;
+  return <div>{blocks.map((b, i) => renderBlock(b, i, profession))}</div>;
 }

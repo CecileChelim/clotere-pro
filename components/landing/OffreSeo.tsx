@@ -1,4 +1,4 @@
-import { CTA_DEMO } from "@/lib/landing-avocat";
+import { CTA_DEMO } from "@/lib/landing-config";
 import { CheckItem, CtaLink, SectionHeading } from "./ui";
 
 export type OffreSurMesure = { badge: string; titre: string; accroche: string; texte: string; inclus: string[] };

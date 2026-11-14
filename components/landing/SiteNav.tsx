@@ -4,36 +4,35 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bars3Icon, ChevronDownIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { CTA_SITE, LOGIN, PRODUITS, SOLUTIONS, type MenuEntry } from "@/lib/landing-avocat";
+import { CTA_SITE, LOGIN, type LandingConfig, type MenuEntry } from "@/lib/landing-config";
 import { btnMd, btnPrimary, btnSecondary } from "./styles";
 
 type MenuKey = "produits" | "solutions";
-
-const MENUS: { key: MenuKey; label: string; entries: MenuEntry[] }[] = [
-  { key: "produits", label: "Produits", entries: PRODUITS },
-  { key: "solutions", label: "Solutions", entries: SOLUTIONS },
-];
 
 const LIENS = [{ href: "/blog", label: "Blog" }];
 
 const itemCls = "flex items-center gap-1.5 whitespace-nowrap rounded-full px-[14px] py-2 text-[15px] font-medium leading-normal text-nuit transition-colors";
 
 /** Logo texte « Clotere » + pastille profession (maquette Figma « Navigation »). */
-export function Logo({ className = "" }: { className?: string }) {
+export function Logo({ badge, className = "" }: { badge: string; className?: string }) {
   return (
     <span className={`flex items-center gap-[10px] ${className}`}>
       <span className="font-manrope text-[22px] font-bold tracking-[-0.55px] text-nuit">Clotere</span>
-      <span className="rounded-full bg-brand-soft px-3 py-[5px] font-geistmono text-[11px] font-semibold tracking-[0.66px] text-brand">AVOCATS</span>
+      <span className="rounded-full bg-brand-soft px-3 py-[5px] font-geistmono text-[11px] font-semibold tracking-[0.66px] text-brand">{badge}</span>
     </span>
   );
 }
 
 /**
- * Navigation du site avocat : Produits ▾ / Solutions ▾ / Tarifs, comme le site
+ * Navigation des sites vitrines : Produits ▾ / Solutions ▾ / Blog, comme le site
  * notaire. Tous les liens des menus sont dans le HTML servi (SEO) ; seule
  * l'ouverture est côté client.
  */
-export default function SiteNav({ espace }: { espace?: { initiales: string } | null }) {
+export default function SiteNav({ conf, espace }: { conf: LandingConfig; espace?: { initiales: string } | null }) {
+  const MENUS: { key: MenuKey; label: string; entries: MenuEntry[] }[] = [
+    { key: "produits", label: "Produits", entries: conf.produits },
+    { key: "solutions", label: "Solutions", entries: conf.solutions },
+  ];
   const [open, setOpen] = useState<MenuKey | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileSection, setMobileSection] = useState<MenuKey | null>(null);
@@ -83,8 +82,8 @@ export default function SiteNav({ espace }: { espace?: { initiales: string } | n
 
   return (
     <nav ref={navRef} aria-label="Navigation principale" className="relative z-40 flex w-full max-w-[1200px] items-center justify-between" onPointerLeave={hoverClose}>
-      <Link href="/" aria-label="Clotere Avocats — accueil">
-        <Logo />
+      <Link href="/" aria-label={`${conf.nom} — accueil`}>
+        <Logo badge={conf.badge} />
       </Link>
 
       {/* Menu desktop */}
@@ -162,7 +161,7 @@ export default function SiteNav({ espace }: { espace?: { initiales: string } | n
           <div className="fixed inset-0 z-50 bg-nuit/20" onClick={() => setMobileOpen(false)} />
           <div className="fixed inset-y-0 right-0 z-50 flex w-full flex-col gap-6 overflow-y-auto bg-white p-6 sm:max-w-sm">
             <div className="flex items-center justify-between">
-              <Logo />
+              <Logo badge={conf.badge} />
               <button type="button" onClick={() => setMobileOpen(false)} className="-mr-2 rounded-full p-2 text-nuit">
                 <span className="sr-only">Fermer</span>
                 <XMarkIcon aria-hidden="true" className="size-6" />

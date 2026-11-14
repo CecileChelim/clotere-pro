@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { Cta } from "@/lib/landing-avocat";
+import { CONFIGS, type Cta, type LandingConfig, type ProfessionId } from "@/lib/landing-config";
 import { landingFonts } from "./fonts";
 import Hero from "./Hero";
 import FeatureScroller, { type Feature } from "./FeatureScroller";
@@ -7,11 +7,12 @@ import Pricing from "./Pricing";
 import OffreSeo, { type OffreSurMesure } from "./OffreSeo";
 import CtaFooter from "./CtaFooter";
 import { CartesSection, Faq, GuideArticle, JsonLd, SectionHeading, Stats, type CarteData, type GuideData } from "./ui";
-import { SITE_URL } from "@/lib/landing-avocat";
 import { px } from "./styles";
 
 /** Contenu d'une page produit / solution (gabarit des maquettes Figma avocat). */
 export type ProductPageData = {
+  /** Profession du site (avocat par défaut). */
+  profession?: ProfessionId;
   /** Chemin de la page, ex. /produit/creation-site-internet-avocat */
   path: string;
   meta: { title: string; description: string };
@@ -30,8 +31,8 @@ export type ProductPageData = {
 };
 
 /** Coque commune des landings : polices, fond, espacement entre blocs arrondis. */
-export function LandingShell({ children }: { children: ReactNode }) {
-  return <div className={`${landingFonts} lp flex flex-col gap-2 bg-white p-2 font-sans leading-[normal] text-nuit antialiased`}>{children}</div>;
+export function LandingShell({ conf, children }: { conf: LandingConfig; children: ReactNode }) {
+  return <div data-profession={conf.id} className={`${landingFonts} lp flex flex-col gap-2 bg-white p-2 font-sans leading-[normal] text-nuit antialiased`}>{children}</div>;
 }
 
 /**
@@ -41,9 +42,11 @@ export function LandingShell({ children }: { children: ReactNode }) {
  */
 export default function ProductTemplate({ data }: { data: ProductPageData }) {
   const { hero, stats, cartes, features, apresFeatures, pricing, faq, guide, cta } = data;
+  const conf = CONFIGS[data.profession ?? "avocat"];
+  const SITE_URL = conf.siteUrl;
   return (
-    <LandingShell>
-      <Hero {...hero} />
+    <LandingShell conf={conf}>
+      <Hero conf={conf} {...hero} />
 
       <section aria-label="Chiffres clés" className={`flex flex-col items-center pb-6 pt-12 lg:pt-[72px] ${px}`}>
         <Stats items={stats} />
@@ -64,7 +67,7 @@ export default function ProductTemplate({ data }: { data: ProductPageData }) {
 
       {apresFeatures}
 
-      {typeof pricing === "object" ? <OffreSeo offre={pricing} /> : <Pricing variant={pricing} />}
+      {typeof pricing === "object" ? <OffreSeo offre={pricing} /> : <Pricing conf={conf} variant={pricing} />}
 
       <section className={`flex flex-col items-center gap-10 py-20 lg:py-[120px] ${px}`}>
         <Faq items={faq} />
@@ -74,7 +77,7 @@ export default function ProductTemplate({ data }: { data: ProductPageData }) {
         <GuideArticle guide={guide} />
       </section>
 
-      <CtaFooter {...cta} />
+      <CtaFooter conf={conf} {...cta} />
 
       <JsonLd
         data={{
@@ -87,7 +90,7 @@ export default function ProductTemplate({ data }: { data: ProductPageData }) {
               url: `${SITE_URL}${data.path}`,
               serviceType: data.meta.title,
               areaServed: { "@type": "Country", name: "France" },
-              audience: { "@type": "BusinessAudience", audienceType: "Cabinets d’avocats" },
+              audience: { "@type": "BusinessAudience", audienceType: conf.audience },
               provider: { "@type": "Organization", name: "Clotere", url: SITE_URL },
             },
             {

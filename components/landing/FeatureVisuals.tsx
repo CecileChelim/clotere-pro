@@ -1,5 +1,9 @@
 import Image from "next/image";
 import type { ReactNode } from "react";
+import type { ProfessionId } from "@/lib/landing-config";
+import { EXEMPLES } from "./exemples";
+
+type P = { p?: ProfessionId };
 
 const shadow = "shadow-[0px_24px_48px_0px_rgba(13,10,26,0.35)]";
 
@@ -48,17 +52,18 @@ function Toast({ title, sub, className }: { title: string; sub: string; classNam
 }
 
 /** Visibilité / prise de rendez-vous : téléphone avec le bouton Clotere + toast de confirmation. */
-export function VisualPriseRdv() {
+export function VisualPriseRdv({ p = "avocat" }: P) {
+  const ex = EXEMPLES[p];
   return (
     <Visual photo="soir" overlay="rgba(13,11,20,0.32)">
       <div className="absolute left-[174px] top-[64px] flex h-[600px] w-[300px] flex-col rounded-[46px] bg-nuit p-[10px] shadow-[0px_24px_48px_0px_rgba(13,10,26,0.45)]">
         <div className="flex flex-1 flex-col gap-4 rounded-[38px] bg-white px-6 py-11">
-          <p className="text-[22px] font-semibold leading-[1.2] text-nuit">Cabinet Lefèvre &amp; Associés</p>
+          <p className="text-[22px] font-semibold leading-[1.2] text-nuit">{ex.telephone.cabinet}</p>
           <p className="flex items-center gap-1.5 text-[15px]">
             <span className="font-semibold text-nuit">4,9</span>
             <Stars />
           </p>
-          <p className="text-[15px] text-[#5c5a6b]">Avocats · Paris 4e</p>
+          <p className="text-[15px] text-[#5c5a6b]">{ex.telephone.sous}</p>
           <div className="h-2" />
           <div className="flex h-[60px] w-full items-center justify-center gap-[10px] rounded-2xl bg-brand">
             <svg viewBox="0 0 20 20" width={20} height={20} fill="none" stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -75,8 +80,9 @@ export function VisualPriseRdv() {
 }
 
 /** Qualification : fiche de la demande. */
-export function VisualQualification() {
-  const items = ["Divorce par consentement mutuel", "2 enfants · garde à organiser", "Pièces reçues · 3/3"];
+export function VisualQualification({ p = "avocat" }: P) {
+  const ex = EXEMPLES[p];
+  const items = ex.qualification.items;
   return (
     <Visual photo="bureau" overlay="rgba(13,11,20,0.24)">
       <div className={`absolute left-[132px] top-[110px] flex w-[400px] flex-col gap-5 rounded-[24px] bg-white p-8 ${shadow}`}>
@@ -87,7 +93,7 @@ export function VisualQualification() {
             <p className="text-[15px] text-[#8a8798]">Jeudi · 10h00</p>
           </div>
         </div>
-        <span className="self-start rounded-full bg-[#ecfdf3] px-[14px] py-[7px] text-[15px] font-semibold text-[#1f7a34]">Première consultation · Droit de la famille</span>
+        <span className="self-start rounded-full bg-[#ecfdf3] px-[14px] py-[7px] text-[15px] font-semibold text-[#1f7a34]">{ex.qualification.tag}</span>
         <ul className="flex flex-col gap-3">
           {items.map((t) => (
             <li key={t} className="flex items-center gap-3">
@@ -148,7 +154,8 @@ export function VisualAvis() {
 }
 
 /** Site internet : navigateur avec le site du cabinet généré, bouton de rendez-vous intégré. */
-export function VisualSite() {
+export function VisualSite({ p = "avocat" }: P) {
+  const ex = EXEMPLES[p];
   const pages = ["Accueil", "Expertises", "Honoraires", "Contact"];
   return (
     <Visual photo="bureau" overlay="rgba(13,11,20,0.3)">
@@ -157,10 +164,10 @@ export function VisualSite() {
           {["#ff5f57", "#febc2e", "#28c840"].map((c) => (
             <span key={c} className="size-[10px] rounded-full" style={{ backgroundColor: c }} />
           ))}
-          <span className="ml-2 rounded-md bg-white px-3 py-1 text-[13px] text-[#6b6a7b]">cabinet-martin.fr</span>
+          <span className="ml-2 rounded-md bg-white px-3 py-1 text-[13px] text-[#6b6a7b]">{ex.url}</span>
         </div>
         <div className="flex items-center justify-between px-7 pt-6">
-          <p className="text-[17px] font-bold text-nuit">Cabinet Martin</p>
+          <p className="text-[17px] font-bold text-nuit">{ex.cabinet}</p>
           <div className="flex gap-4 text-[13px] text-[#6b6a7b]">
             {pages.slice(1).map((p) => (
               <span key={p}>{p}</span>
@@ -168,14 +175,14 @@ export function VisualSite() {
           </div>
         </div>
         <div className="flex flex-col items-start gap-3 px-7 pb-7 pt-8">
-          <p className="font-geistmono text-[11px] font-semibold tracking-[0.9px] text-brand">AVOCAT EN DROIT DE LA FAMILLE · LYON</p>
-          <p className="text-[30px] font-semibold leading-[1.1] tracking-[-0.8px] text-nuit">Un accompagnement clair, à chaque étape.</p>
+          <p className="font-geistmono text-[11px] font-semibold tracking-[0.9px] text-brand">{ex.titreSite}</p>
+          <p className="text-[30px] font-semibold leading-[1.1] tracking-[-0.8px] text-nuit">{ex.accrocheSite}</p>
           <span className="h-2 w-[300px] rounded bg-nuit/10" />
           <span className="h-2 w-[220px] rounded bg-nuit/10" />
           <span className="mt-2 rounded-full bg-brand px-5 py-[11px] text-[14px] font-semibold text-white">Prendre rendez-vous</span>
         </div>
         <div className="grid grid-cols-3 gap-3 bg-[#f7f7fa] px-7 py-5">
-          {["Divorce", "Garde d’enfants", "Pension"].map((t) => (
+          {ex.cartesSite.map((t) => (
             <div key={t} className="flex flex-col gap-2 rounded-xl bg-white p-3">
               <span className="size-6 rounded-md bg-brand-soft" />
               <span className="text-[13px] font-semibold text-nuit">{t}</span>
@@ -183,16 +190,17 @@ export function VisualSite() {
           ))}
         </div>
       </div>
-      <Toast title="Site publié" sub="cabinet-martin.fr · en ligne" className="left-[330px] top-[440px]" />
+      <Toast title="Site publié" sub={`${ex.url} · en ligne`} className="left-[330px] top-[440px]" />
     </Visual>
   );
 }
 
 /** Référencement : recherche Google Maps sur téléphone, le cabinet en tête. */
-export function VisualVisibilite() {
+export function VisualVisibilite({ p = "avocat" }: P) {
+  const ex = EXEMPLES[p];
   const others = [
-    { rank: 2, name: "Cabinet Saint-Paul Avocats", note: "4,2", count: "(31)" },
-    { rank: 3, name: "Avocats du Marais", note: "4,0", count: "(19)" },
+    { rank: 2, name: ex.maps.autres[0], note: "4,2", count: "(31)" },
+    { rank: 3, name: ex.maps.autres[1], note: "4,0", count: "(19)" },
   ];
   return (
     <Visual photo="soir" overlay="rgba(13,11,20,0.32)">
@@ -200,7 +208,7 @@ export function VisualVisibilite() {
         <div className="flex flex-1 flex-col gap-3 overflow-hidden rounded-[38px] bg-white px-4 pb-11 pt-10">
           <div className="flex w-full items-center gap-2 whitespace-nowrap rounded-full border border-[#dadce0] bg-white px-[14px] py-[10px]">
             <span className="text-[15px] font-bold text-[#4285f4]">G</span>
-            <span className="text-[12px] text-nuit">avocat divorce paris 4e</span>
+            <span className="text-[12px] text-nuit">{ex.maps.recherche}</span>
           </div>
           <div className="flex gap-[14px] whitespace-nowrap px-1 text-[11px]">
             <span className="font-medium text-[#6b6a7b]">Tous</span>
@@ -222,7 +230,7 @@ export function VisualVisibilite() {
           <div className="flex w-full flex-col gap-1 rounded-[14px] border-[1.5px] border-brand bg-white p-3">
             <p className="flex items-center gap-1.5 whitespace-nowrap font-semibold">
               <span className="text-[12px] text-brand">1.</span>
-              <span className="text-[13px] text-nuit">Cabinet Lefèvre &amp; Associés</span>
+              <span className="text-[13px] text-nuit">{ex.telephone.cabinet}</span>
             </p>
             <p className="flex items-center gap-1 whitespace-nowrap text-[11px]">
               <span className="font-semibold text-nuit">4,9</span>
@@ -246,7 +254,7 @@ export function VisualVisibilite() {
           ))}
         </div>
       </div>
-      <Toast title="1er sur Google Maps" sub="« avocat divorce Paris 4e »" className="left-[299px] top-[392px]" />
+      <Toast title="1er sur Google Maps" sub={`« ${ex.maps.recherche} »`} className="left-[299px] top-[392px]" />
     </Visual>
   );
 }

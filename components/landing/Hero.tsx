@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { Cta } from "@/lib/landing-avocat";
+import type { Cta, LandingConfig } from "@/lib/landing-config";
 import SiteNav from "./SiteNav";
 import { CtaLink } from "./ui";
 
@@ -9,6 +9,7 @@ import { CtaLink } from "./ui";
  * cartes sont passées (accueil), elles sont posées à cheval sur le dégradé.
  */
 export default function Hero({
+  conf,
   eyebrow,
   title,
   subtitle,
@@ -18,6 +19,7 @@ export default function Hero({
   espace,
   grand = false,
 }: {
+  conf: LandingConfig;
   eyebrow: string;
   title: ReactNode;
   subtitle: string;
@@ -36,7 +38,7 @@ export default function Hero({
         }`}
         style={{ backgroundImage: "var(--brand-gradient)" }}
       >
-        <SiteNav espace={espace} />
+        <SiteNav conf={conf} espace={espace} />
         <div className="flex w-full max-w-[1080px] flex-col items-center gap-6 text-center">
           <p className="rounded-full bg-white/75 px-[14px] py-1.5 font-geistmono text-[11px] font-semibold tracking-[0.96px] text-brand sm:text-[12px]">{eyebrow}</p>
           <h1

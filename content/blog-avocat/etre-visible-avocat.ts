@@ -1,4 +1,4 @@
-import type { BlogPost } from "@/lib/blog-avocat";
+import type { BlogPost } from "@/lib/blog";
 
 export const etreVisibleAvocat: BlogPost = {
   slug: "etre-visible-avocat-2026",

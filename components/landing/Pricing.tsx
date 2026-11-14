@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { DEMO_LINK, SIGNUP } from "@/lib/landing-avocat";
+import { DEMO_LINK, SIGNUP, type LandingConfig } from "@/lib/landing-config";
 import { CheckIcon, ClockIcon, CrossIcon, SectionHeading } from "./ui";
 import { btnMd, btnPrimary, btnSecondary, btnSoft } from "./styles";
 
@@ -149,7 +149,7 @@ function Carte({ o, annuelActif, sansAnnuel = false }: { o: Offre; annuelActif: 
  * Section tarifs (maquette Figma « Tarifs ») : bascule mensuel / annuel (-10 %)
  * et cartes d'offres. `variant="outil"` : l'offre widget seule (page prise de rdv).
  */
-export default function Pricing({ variant = "offres" }: { variant?: "offres" | "outil" }) {
+export default function Pricing({ conf, variant = "offres" }: { conf: LandingConfig; variant?: "offres" | "outil" }) {
   const [annuelActif, setAnnuelActif] = useState(false);
   const outil = variant === "outil";
   const offres = outil ? [OUTIL] : OFFRES;
@@ -191,7 +191,7 @@ export default function Pricing({ variant = "offres" }: { variant?: "offres" | "
         {outil ? (
           <>
             Vous voulez aussi un site ? L’offre « Rendez-vous » à 99 € HT / mois inclut le module.{" "}
-            <Link href="/produit/creation-site-internet-avocat#tarifs" className="font-semibold text-brand hover:brightness-110">
+            <Link href={`${conf.pages.site}#tarifs`} className="font-semibold text-brand hover:brightness-110">
               Voir les offres site →
             </Link>
           </>

@@ -1,4 +1,4 @@
-// Blog avocat.clotere.fr : articles écrits dans content/blog-avocat/*.ts.
+// Blogs des sites vitrines : articles écrits dans content/blog-avocat/*.ts et content/blog-comptable/*.ts.
 // Corps au format « markdown léger » (voir components/landing/blog/ArticleBody.tsx) :
 //   ## Titre H2 · ### Titre H3 · lignes « - » (liste) · lignes « 1. » (liste numérotée)
 //   > citation · ::illustration nom | légende · ::photo nom | légende · ::demo
@@ -9,13 +9,15 @@ import { rendezVousQualifiesAvocat } from "@/content/blog-avocat/rendez-vous-qua
 import { ficheGoogleAvocat } from "@/content/blog-avocat/fiche-google-avocat";
 import { siteInternetAvocatGuide } from "@/content/blog-avocat/site-internet-avocat-guide";
 import { visibiliteReferencementAvocat } from "@/content/blog-avocat/visibilite-referencement-avocat";
+import { BLOG_COMPTABLE } from "@/content/blog-comptable";
+import type { ProfessionId } from "@/lib/landing-config";
 
 export type FaqItem = { q: string; a: string };
 
 export type BlogPost = {
   slug: string;
   title: string;
-  /** Titre pour Google, si différent du H1 (≤ 48 caractères, « · Clotere Avocat » est ajouté). */
+  /** Titre pour Google, si différent du H1 (≤ 48 caractères, « · Clotere … » est ajouté). */
   seoTitle?: string;
   description: string;
   date: string; // AAAA-MM-JJ
@@ -30,13 +32,10 @@ export type BlogPost = {
 
 export type Heading = { id: string; text: string };
 
-const POSTS: BlogPost[] = [
-  etreVisibleAvocat,
-  rendezVousQualifiesAvocat,
-  ficheGoogleAvocat,
-  siteInternetAvocatGuide,
-  visibiliteReferencementAvocat,
-];
+const POSTS: Record<ProfessionId, BlogPost[]> = {
+  avocat: [etreVisibleAvocat, rendezVousQualifiesAvocat, ficheGoogleAvocat, siteInternetAvocatGuide, visibiliteReferencementAvocat],
+  comptable: BLOG_COMPTABLE,
+};
 
 /** Texte brut d'une ligne (sans gras ni liens). */
 export function plain(md: string): string {
@@ -68,16 +67,16 @@ export function readingMinutes(post: BlogPost): number {
   return Math.max(1, Math.round(post.body.split(/\s+/).filter(Boolean).length / 220));
 }
 
-export function getAllPosts(): BlogPost[] {
-  return [...POSTS].sort((a, b) => b.date.localeCompare(a.date) || a.title.localeCompare(b.title));
+export function getAllPosts(profession: ProfessionId = "avocat"): BlogPost[] {
+  return [...POSTS[profession]].sort((a, b) => b.date.localeCompare(a.date) || a.title.localeCompare(b.title));
 }
 
-export function getPost(slug: string): BlogPost | null {
-  return POSTS.find((p) => p.slug === slug) ?? null;
+export function getPost(slug: string, profession: ProfessionId = "avocat"): BlogPost | null {
+  return POSTS[profession].find((p) => p.slug === slug) ?? null;
 }
 
-export function getRelatedPosts(post: BlogPost, limit = 3): BlogPost[] {
-  return getAllPosts()
+export function getRelatedPosts(post: BlogPost, profession: ProfessionId = "avocat", limit = 3): BlogPost[] {
+  return getAllPosts(profession)
     .filter((p) => p.slug !== post.slug)
     .sort((a, b) => Number(b.category === post.category) - Number(a.category === post.category))
     .slice(0, limit);

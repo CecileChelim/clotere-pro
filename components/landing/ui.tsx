@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { isExternal, type Cta } from "@/lib/landing-avocat";
+import { isExternal, type Cta } from "@/lib/landing-config";
 import { btnMd, btnPrimary, btnSecondary, eyebrow } from "./styles";
 
 /** Lien-bouton : externe (nouvel onglet) ou interne (next/link). */

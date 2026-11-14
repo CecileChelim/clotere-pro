@@ -40,7 +40,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const m = profession === "comptable" ? META.comptable : META.avocat;
   return {
     metadataBase: new URL(m.url),
-    title: { default: m.titre, template: `%s · ${m.nom}` },
+    // « · Clotere Expert-comptable » est trop long pour les titres Google : suffixe court côté comptable.
+    title: { default: m.titre, template: profession === "comptable" ? "%s · Clotere" : `%s · ${m.nom}` },
     description: m.description,
     applicationName: m.nom,
     openGraph: { type: "website", locale: "fr_FR", siteName: m.nom, title: m.titre, description: m.description, url: m.url, images: [{ url: `/icons/icon-${m.icone}-512.png`, width: 512, height: 512 }] },

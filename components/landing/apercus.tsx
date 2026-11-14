@@ -1,4 +1,8 @@
 import type { ReactNode } from "react";
+import type { ProfessionId } from "@/lib/landing-config";
+import { EXEMPLES } from "./exemples";
+
+type P = { p?: ProfessionId };
 
 /**
  * Aperçus d'interface des blocs « fonctionnalité » des pages produit / solution
@@ -48,7 +52,8 @@ function Spacer() {
 
 /* ── Éditeur de site ───────────────────────────────────────────────────────── */
 
-export function ApercuEditeurSite() {
+export function ApercuEditeurSite({ p = "avocat" }: P) {
+  const ex = EXEMPLES[p];
   const pages = ["Accueil", "Expertises", "Honoraires", "Contact"];
   return (
     <Apercu padded={false}>
@@ -56,7 +61,7 @@ export function ApercuEditeurSite() {
         {["#ff5f57", "#febc2e", "#28c840"].map((c) => (
           <span key={c} className="size-2 rounded-full" style={{ backgroundColor: c }} />
         ))}
-        <span className={`ml-1 truncate rounded-md bg-white px-3 py-1 text-[11px] ${muted}`}>cabinet-martin.fr</span>
+        <span className={`ml-1 truncate rounded-md bg-white px-3 py-1 text-[11px] ${muted}`}>{ex.url}</span>
         <Spacer />
         <Pill>Publier</Pill>
       </div>
@@ -72,7 +77,7 @@ export function ApercuEditeurSite() {
         <div className="flex min-w-0 flex-1 flex-col gap-[10px] bg-[#f7f7fa] p-4">
           <div className="flex w-full flex-col items-start gap-2 rounded-xl border border-dashed border-brand bg-brand-soft p-4">
             <p className="font-geistmono text-[9px] font-semibold text-brand">VOTRE CABINET</p>
-            <p className="text-[16px] font-bold">Cabinet Martin</p>
+            <p className="text-[16px] font-bold">{ex.cabinet}</p>
             <span className="h-1.5 w-[150px] max-w-full rounded-[3px] bg-nuit/[0.12]" />
             <span className="h-1.5 w-[110px] rounded-[3px] bg-nuit/[0.12]" />
             <Pill>Prendre rendez-vous</Pill>
@@ -94,7 +99,8 @@ export function ApercuEditeurSite() {
 
 /* ── Module de réservation ─────────────────────────────────────────────────── */
 
-export function ApercuReservation() {
+export function ApercuReservation({ p = "avocat" }: P) {
+  const ex = EXEMPLES[p];
   const days = [
     ["LUN", "16"],
     ["MAR", "17"],
@@ -107,7 +113,7 @@ export function ApercuReservation() {
     <Apercu>
       <div className="flex flex-col gap-0.5">
         <p className="text-[15px] font-semibold">Prendre rendez-vous</p>
-        <p className={`text-[12px] ${muted}`}>Cabinet Martin</p>
+        <p className={`text-[12px] ${muted}`}>{ex.cabinet}</p>
       </div>
       <div className="flex flex-wrap gap-1.5">
         <Pill>Première consultation</Pill>
@@ -136,13 +142,14 @@ export function ApercuReservation() {
 
 /* ── Fiche Google et avis ──────────────────────────────────────────────────── */
 
-export function ApercuFicheGoogle() {
+export function ApercuFicheGoogle({ p = "avocat" }: P) {
+  const ex = EXEMPLES[p];
   return (
     <Apercu>
       <div className="flex items-center gap-3">
-        <Avatar initials="CM" size={48} square />
+        <Avatar initials={ex.initiales} size={48} square />
         <div className="flex flex-col gap-[3px]">
-          <p className="text-[15px] font-semibold">Cabinet Martin</p>
+          <p className="text-[15px] font-semibold">{ex.cabinet}</p>
           <p className="flex items-center gap-1.5">
             <span className="text-[13px] font-semibold">4,9</span>
             <span className="text-[13px] text-[#f5b400]">★★★★★</span>
@@ -174,9 +181,10 @@ export function ApercuFicheGoogle() {
 
 /* ── Demande qualifiée ─────────────────────────────────────────────────────── */
 
-export function ApercuDemandeQualifiee() {
+export function ApercuDemandeQualifiee({ p = "avocat" }: P) {
+  const ex = EXEMPLES[p];
   const rows = [
-    ["Motif", "Divorce par consentement mutuel"],
+    ["Motif", ex.demande.motif],
     ["Urgence", "Sous 15 jours"],
     ["Documents", "3 / 4 reçus"],
     ["Créneau souhaité", "Mardi 17 · 14:00"],
@@ -186,7 +194,7 @@ export function ApercuDemandeQualifiee() {
       <div className="flex w-full items-center gap-[10px]">
         <Avatar initials="JM" />
         <div className="flex min-w-0 flex-col gap-px">
-          <p className="text-[14px] font-semibold">Nouvelle demande · Divorce</p>
+          <p className="text-[14px] font-semibold">{ex.demande.titre}</p>
           <p className={`text-[12px] ${muted}`}>Reçue il y a 4 min · via votre site</p>
         </div>
         <Spacer />
@@ -212,10 +220,11 @@ export function ApercuDemandeQualifiee() {
 
 type Slot = { label: string; time: string; tone: "brand" | "dark" | "soft" | "blocked" } | null;
 
-export function ApercuAgendaSemaine() {
+export function ApercuAgendaSemaine({ p = "avocat" }: P) {
+  const ex = EXEMPLES[p];
   const week: [string, Slot[]][] = [
     ["L 16", [{ label: "Consultation", time: "9h", tone: "brand" }, null, null, null]],
-    ["M 17", [null, { label: "Audience", time: "11h", tone: "dark" }, null, { label: "Visio", time: "16h", tone: "soft" }]],
+    ["M 17", [null, { label: ex.agendaCreneau, time: "11h", tone: "dark" }, null, { label: "Visio", time: "16h", tone: "soft" }]],
     ["M 18", [null, null, { label: "Rendez-vous", time: "14h", tone: "brand" }, null]],
     ["J 19", [{ label: "Bloqué", time: "9h", tone: "blocked" }, null, { label: "Consultation", time: "14h", tone: "soft" }, null]],
     ["V 20", [null, { label: "Rendez-vous", time: "11h", tone: "brand" }, null, null]],
@@ -258,7 +267,8 @@ export function ApercuAgendaSemaine() {
 
 /* ── Article publié (référencement) ────────────────────────────────────────── */
 
-export function ApercuArticle() {
+export function ApercuArticle({ p = "avocat" }: P) {
+  const ex = EXEMPLES[p];
   return (
     <Apercu>
       <div className="flex w-full flex-col gap-1.5 rounded-xl bg-nuit p-4">
@@ -266,7 +276,7 @@ export function ApercuArticle() {
         <span className="h-1.5 w-[160px] rounded-[3px] bg-white/50" />
         <span className="h-1.5 w-[110px] rounded-[3px] bg-white/30" />
       </div>
-      <p className="text-[15px] font-semibold">Divorce : les 5 étapes à connaître en 2026</p>
+      <p className="text-[15px] font-semibold">{ex.article}</p>
       <div className="flex items-center gap-2">
         <Pill tone="green">Publié</Pill>
         <span className={`text-[12px] ${muted}`}>6 min de lecture · 12 nov.</span>
@@ -329,18 +339,27 @@ export function ApercuRapport({
 /* ── Annonce Google (Google Ads) ───────────────────────────────────────────── */
 
 export function ApercuAnnonceGoogle({
-  recherche = "avocat divorce paris 11",
-  titre = "Avocat en divorce à Paris 11 — Rendez-vous sous 48 h",
-  texte = "Première consultation en cabinet ou en visio. Réservez en ligne 24h/24, réponse garantie.",
+  p = "avocat",
+  variante = 1,
+  recherche,
+  titre,
+  texte,
   statut = "Annonce validée par le cabinet",
   detail = "Budget 15 €/jour · 214 clics ce mois",
-}: {
+}: P & {
+  /** 2 = second exemple d'annonce de la profession. */
+  variante?: 1 | 2;
   recherche?: string;
   titre?: string;
   texte?: string;
   statut?: string;
   detail?: string;
 }) {
+  const ex = EXEMPLES[p];
+  const base = variante === 2 ? ex.annonce2 : { recherche: ex.recherche, ...ex.annonce };
+  recherche ??= base.recherche;
+  titre ??= base.titre;
+  texte ??= base.texte;
   return (
     <Apercu>
       <div className={`flex w-full items-center gap-2 whitespace-nowrap rounded-full ${line} px-[14px] py-[10px]`}>
@@ -351,8 +370,8 @@ export function ApercuAnnonceGoogle({
         <p className="flex flex-wrap items-center gap-1.5 whitespace-nowrap">
           <span className="text-[11px] font-semibold">Sponsorisé</span>
           <span className={`text-[11px] ${muted}`}>·</span>
-          <span className="text-[12px] font-semibold">Cabinet Martin</span>
-          <span className={`text-[11px] ${muted}`}>cabinet-martin.fr</span>
+          <span className="text-[12px] font-semibold">{ex.cabinet}</span>
+          <span className={`text-[11px] ${muted}`}>{ex.url}</span>
         </p>
         <p className="text-[16px] text-[#1a0dab]">{titre}</p>
         <p className={`text-[12px] ${muted}`}>{texte}</p>
@@ -372,21 +391,22 @@ export function ApercuAnnonceGoogle({
 
 /* ── Réponse d'une IA (GEO) ────────────────────────────────────────────────── */
 
-export function ApercuReponseIA() {
+export function ApercuReponseIA({ p = "avocat" }: P) {
+  const ex = EXEMPLES[p];
   return (
     <Apercu>
       <div className="flex w-full justify-end">
-        <p className="rounded-2xl bg-[#f1f0f6] px-[14px] py-[10px] text-[13px]">Quel avocat en droit de la famille à Lyon ?</p>
+        <p className="rounded-2xl bg-[#f1f0f6] px-[14px] py-[10px] text-[13px]">{ex.ia.question}</p>
       </div>
       <div className="flex w-full gap-[10px]">
         <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-nuit text-[13px] text-white">✦</span>
         <div className="flex min-w-0 flex-1 flex-col gap-2 text-[13px]">
           <p>
-            Je vous recommande le <span className="font-semibold text-brand">Cabinet Martin</span>, qui intervient en divorce et garde d’enfants, avec 4,9 ★ sur 128 avis et une
-            prise de rendez-vous en ligne.
+            Je vous recommande le <span className="font-semibold text-brand">{ex.cabinet}</span>, {ex.ia.texte}, avec 4,9 ★ sur 128 avis et une prise de
+            rendez-vous en ligne.
           </p>
           <div className="flex flex-wrap gap-1.5">
-            <Pill tone="soft">1&nbsp;&nbsp;cabinet-martin.fr</Pill>
+            <Pill tone="soft">1&nbsp;&nbsp;{ex.url}</Pill>
             <span className="inline-flex items-center whitespace-nowrap rounded-full bg-[#f1f0f6] px-[10px] py-1 text-[11px] font-semibold text-[#6b6a7b]">2&nbsp;&nbsp;Google Maps</span>
           </div>
         </div>
