@@ -2,7 +2,8 @@ import "server-only";
 import { createHash } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { esc, pageMail } from "@/lib/mail-compte";
-import { adresseMetier, nomViaClotere } from "@/lib/expediteur";
+import { nomViaClotere } from "@/lib/expediteur";
+import { envoyerMail } from "@/lib/envoi-mail";
 import { lienAvisGoogle, synchroniserGoogle, type AvisPlaces } from "@/lib/google";
 import { avisActif } from "@/lib/options";
 import { notifierSlack } from "@/lib/slack";
@@ -144,23 +145,11 @@ async function envoyerAuClient(cab: Cab, pro: Pro, to: string, clientNom: string
        : `<p>Merci d'avoir fait confiance à ${esc(nomCab)}.</p><p>Si vous avez une minute, votre avis sur Google aide d'autres personnes à trouver le bon interlocuteur. Il suffit de quelques mots.</p>`}
      <p style="font-size:13px;color:#6b7280">Vous ne souhaitez pas laisser d'avis ? Ignorez simplement ce message.</p>`,
     { href: lien, label: "Laisser un avis sur Google" });
-  const key = process.env.BREVO_API_KEY;
-  let envoye = false, erreur: string | null = null;
-  if (key) {
-    try {
-      const res = await fetch("https://api.brevo.com/v3/smtp/email", {
-        method: "POST",
-        headers: { "api-key": key, "Content-Type": "application/json", accept: "application/json" },
-        body: JSON.stringify({
-          sender: { name: nomViaClotere(nomCab), email: adresseMetier(pro.profession) },
-          replyTo: { email: pro.email, name: [pro.prenom, pro.nom].filter(Boolean).join(" ") || nomCab },
-          to: [{ email: to }], subject: sujet, htmlContent: html,
-        }),
-      });
-      envoye = res.ok;
-      if (!res.ok) erreur = `Brevo ${res.status} : ${await res.text()}`;
-    } catch (e) { erreur = String(e); }
-  } else console.log("[avis] e-mail (Brevo non configuré)", to, sujet);
+  const { envoye, erreur } = await envoyerMail({
+    nomExpediteur: nomViaClotere(nomCab),
+    replyTo: pro.email ? { email: pro.email, name: [pro.prenom, pro.nom].filter(Boolean).join(" ") || nomCab } : undefined,
+    to, sujet, html,
+  });
   await createAdminClient().from("emails").insert({ booking_id: null, professional_id: pro.id, destinataire: to, type: relance ? "avis_relance" : "avis_demande", sujet, html, envoye, erreur });
   if (erreur) console.error("[avis] e-mail", erreur);
   return envoye;

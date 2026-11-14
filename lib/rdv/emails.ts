@@ -1,11 +1,12 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fmtDateHeure, MODE_LABEL } from "./format";
-import { adresseClotere, adresseMetier, nomViaClotere } from "@/lib/expediteur";
+import { adresseClotere, nomViaClotere } from "@/lib/expediteur";
+import { envoyerMail } from "@/lib/envoi-mail";
 import { adresseCabinet, libelleMotif, marque, nomClient, nomPro, type RdvComplet } from "./load";
 
 /* ------------------------------------------------------------------ */
-/* Envoi : Brevo si BREVO_API_KEY est défini, sinon simple journal.    */
+/* Envoi : Google SMTP (voir lib/envoi-mail.ts), puis journal.         */
 /* ------------------------------------------------------------------ */
 type Envoi = { to: string; sujet: string; html: string; type: string; rdv: RdvComplet; ics?: string };
 
@@ -13,29 +14,16 @@ export async function envoyer({ to, sujet, html, type, rdv, ics }: Envoi) {
   const db = createAdminClient();
   let envoye = false;
   let erreur: string | null = null;
-  const key = process.env.BREVO_API_KEY;
   const versClient = to.toLowerCase() !== (rdv.pro.email ?? "").toLowerCase();
-  if (key) {
-    try {
-      const res = await fetch("https://api.brevo.com/v3/smtp/email", {
-        method: "POST",
-        headers: { "api-key": key, "Content-Type": "application/json", accept: "application/json" },
-        body: JSON.stringify({
-          // Client : « Cabinet X via Clotere », réponses au pro. Pro : marque du métier, réponses à Clotere.
-          sender: { name: versClient ? nomViaClotere(rdv.pro.cabinet?.nom || nomPro(rdv)) : marque(rdv), email: adresseMetier(rdv.pro.profession) },
-          replyTo: versClient ? { email: rdv.pro.email, name: nomPro(rdv) } : { email: adresseClotere(), name: "Clotere" },
-          to: [{ email: to }],
-          subject: sujet,
-          htmlContent: html,
-          ...(ics ? { attachment: [{ name: "rendez-vous.ics", content: Buffer.from(ics).toString("base64") }] } : {}),
-        }),
-      });
-      envoye = res.ok;
-      if (!res.ok) erreur = `Brevo ${res.status} : ${await res.text()}`;
-    } catch (e) {
-      erreur = String(e);
-    }
-  }
+  // Client : « Cabinet X via Clotere », réponses au pro. Pro : marque du métier, réponses à Clotere.
+  ({ envoye, erreur } = await envoyerMail({
+    nomExpediteur: versClient ? nomViaClotere(rdv.pro.cabinet?.nom || nomPro(rdv)) : marque(rdv),
+    replyTo: versClient ? { email: rdv.pro.email, name: nomPro(rdv) } : { email: adresseClotere(), name: "Clotere" },
+    to,
+    sujet,
+    html,
+    ...(ics ? { pieces: [{ nom: "rendez-vous.ics", contenu: ics }] } : {}),
+  }));
   const { error: e } = await db.from("emails").insert({ booking_id: rdv.id, professional_id: rdv.pro.id, destinataire: to, type, sujet, html, envoye, erreur });
   if (e) console.error("[email] journal impossible :", e.message);
   if (erreur) console.error("[email]", type, erreur);

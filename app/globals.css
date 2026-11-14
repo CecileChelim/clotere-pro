@@ -91,3 +91,39 @@ body {
   --color-violet-900: #08301e;
 }
 [data-theme="comptable"] .bg-brand-gradient { background: linear-gradient(115deg, #fbf7e8 28%, #dcefa0 62%, #6fbf8f); }
+
+/* ── Landings publiques (avocat.clotere.fr, maquettes Figma « Kit landing ») ──
+   La couleur de la profession passe par des variables : pour comptable, il
+   suffira de surcharger --brand* dans [data-theme="comptable"]. */
+:root {
+  --brand: #8e44e6;
+  --brand-soft: #f6edff;
+  --brand-section: #fdf6fa;
+  --brand-gradient: linear-gradient(158deg, #fff1be 30.675%, #ee87cb 67.485%, #b060ff 93.777%);
+}
+
+@theme inline {
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-section: var(--brand-section);
+  --color-nuit: #14131f;
+  --font-manrope: var(--font-manrope-src), system-ui, sans-serif;
+  --font-geistmono: var(--font-geist-mono-src), ui-monospace, monospace;
+}
+
+.lp h1,
+.lp h2,
+.lp h3 {
+  font-family: var(--font-manrope-src), system-ui, sans-serif;
+}
+.lp details > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Couleurs « Expert-comptable » des landings (comptable.clotere.fr) */
+[data-profession="comptable"] {
+  --brand: #146c43;
+  --brand-soft: #eef6f1;
+  --brand-section: #f7faf2;
+  --brand-gradient: linear-gradient(158deg, #fbf7e8 30.675%, #dcefa0 67.485%, #6fbf8f 93.777%);
+}
