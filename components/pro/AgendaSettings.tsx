@@ -1,5 +1,7 @@
 "use client";
 
+import DiffusionWidget from "@/components/widget/DiffusionWidget";
+
 import { useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { MotifsEditor } from "./MotifsEditor";
@@ -8,11 +10,14 @@ import { AbsencesCard, type Absence } from "./AbsencesCard";
 import type { MotifDraft } from "@/lib/professions-config";
 import type { Horaires } from "@/lib/horaires";
 
-type Onglet = "agenda" | "motifs";
+export type Onglet = "agenda" | "motifs" | "site" | "linkedin" | "mail" | "google";
+/** Données du module « Diffusez votre lien » (bouton site, LinkedIn, signature e-mail, fiche Google). */
+export type DiffusionProps = { proId: string; slug: string; base: string; nom: string; office: string; cabinetNom: string | null; telephone: string | null; email: string; metier: string };
+const CANAL: Record<string, string> = { site: "site", linkedin: "linkedin", mail: "signature", google: "google" };
 
-export function AgendaSettings({ proId, motifsInit, connected, provider, retour, detail, horairesInit, absencesInit, ongletInit = "agenda" }: {
+export function AgendaSettings({ proId, motifsInit, connected, provider, retour, detail, horairesInit, absencesInit, ongletInit = "agenda", diffusion }: {
   proId: string; motifsInit: MotifDraft[]; connected: boolean; provider: string | null; retour: string | null; detail?: string | null;
-  horairesInit: Horaires; absencesInit: Absence[]; ongletInit?: Onglet;
+  horairesInit: Horaires; absencesInit: Absence[]; ongletInit?: Onglet; diffusion: DiffusionProps;
 }) {
   const [onglet, setOnglet] = useState<Onglet>(ongletInit);
   const supabase = useMemo(() => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!), []);
@@ -34,19 +39,21 @@ export function AgendaSettings({ proId, motifsInit, connected, provider, retour,
 
   const changer = (o: Onglet) => {
     setOnglet(o);
-    window.history.replaceState(null, "", o === "motifs" ? "/dashboard/agenda?onglet=motifs" : "/dashboard/agenda");
+    window.history.replaceState(null, "", o === "agenda" ? "/dashboard/agenda" : `/dashboard/agenda?onglet=${o}`);
   };
 
   return (
     <div className="mt-6">
-      <div className="flex gap-6 border-b border-gray-200">
-        {([["agenda", "Agenda"], ["motifs", "Motifs de rendez-vous"]] as const).map(([id, label]) => (
+      <div className="flex gap-6 overflow-x-auto border-b border-gray-200">
+        {([["agenda", "Agenda"], ["motifs", "Motifs de rendez-vous"], ["site", "Installation site internet"], ["linkedin", "Installation LinkedIn"], ["mail", "Installation signature e-mail"], ["google", "Installation fiche Google"]] as const).map(([id, label]) => (
           <button key={id} type="button" onClick={() => changer(id)}
-            className={`-mb-px border-b-2 pb-3 text-sm font-medium transition ${onglet === id ? "border-gray-950 text-gray-950" : "border-transparent text-gray-500 hover:text-gray-950"}`}>
+            className={`-mb-px shrink-0 whitespace-nowrap border-b-2 pb-3 text-sm font-medium transition ${onglet === id ? "border-gray-950 text-gray-950" : "border-transparent text-gray-500 hover:text-gray-950"}`}>
             {label}
           </button>
         ))}
       </div>
+
+      {CANAL[onglet] && <div className="mt-8"><DiffusionWidget {...diffusion} canal={CANAL[onglet]} /></div>}
 
       {onglet === "agenda" && (
       <div className="mt-8 space-y-6">

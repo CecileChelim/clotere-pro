@@ -1,3 +1,4 @@
+import { EnTetePage } from "@/components/dashboard/EnTetePage";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ProfilForm } from "@/components/pro/ProfilForm";
@@ -26,9 +27,8 @@ export default async function FichePage() {
 
   return (
     <div>
-      <p className="eyebrow">Ma fiche</p>
-      <h1 className="mt-2 text-4xl font-medium tracking-tight text-gray-950">Mon profil</h1>
-      <p className="mt-2 text-sm text-gray-600">Ces informations s&apos;affichent sur votre page de prise de rendez-vous.</p>
+      <EnTetePage section="Profil" titre="Votre profil et votre cabinet" />
+      <p className="mt-2 text-sm text-gray-600">Ces informations s&apos;affichent sur votre page de prise de rendez-vous et sur votre site.</p>
       <ProfilForm pro={pro} cabinet={cabinet} taxo={taxo} specsInit={specs} />
     </div>
   );

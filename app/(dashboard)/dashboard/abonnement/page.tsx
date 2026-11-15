@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { BoutonStripe } from "@/components/dashboard/AbonnementActions";
-import { etatAbonnement, PRIX_MENSUEL_HT } from "@/lib/abonnement";
+import { etatAbonnement } from "@/lib/abonnement";
+import { libelleFormule, lignesTarif, prixPeriode, totalMensuel } from "@/lib/tarifs";
 
 export default async function AbonnementPage({ searchParams }: { searchParams: Promise<{ paiement?: string }> }) {
   const { paiement } = await searchParams;
@@ -16,7 +17,11 @@ export default async function AbonnementPage({ searchParams }: { searchParams: P
     : { data: null };
   const { count } = pro?.cabinet_id ? await db.from("professionals").select("id", { count: "exact", head: true }).eq("cabinet_id", pro.cabinet_id) : { count: 1 };
   const e = etatAbonnement(cab);
-  const nb = cab?.abonnement_quantite ?? Math.max(1, count ?? 1);
+  const nb = Math.max(1, count ?? 1);
+  const lignes = lignesTarif(cab, nb);
+  const mensuel = totalMensuel(lignes);
+  const annuel = prixPeriode(mensuel, "an");
+  const auMois = cab?.abonnement_periode !== "an";
   const titulaire = pro?.role !== "membre";
   const debutEssai = cab?.trial_ends_at ? new Date(new Date(cab.trial_ends_at).getTime() - 7 * 86400000).toISOString() : null;
   const essaiPreserve = !!cab?.trial_ends_at && new Date(cab.trial_ends_at).getTime() - Date.now() > 48 * 3600e3;
@@ -52,13 +57,16 @@ export default async function AbonnementPage({ searchParams }: { searchParams: P
             {e.essai && cab.subscription_status !== "actif" && (
               <p className="mt-1 text-sm text-gray-600">Démarré à votre inscription le {date(debutEssai)}, jusqu&apos;au {date(cab.trial_ends_at)} inclus.</p>
             )}
-            {!e.essai && !e.actif && <p className="mt-1 text-sm text-gray-600">Terminé le {date(cab.trial_ends_at)} : votre page de prise de rendez-vous est en pause.</p>}
+            {!e.essai && !e.actif && <p className="mt-1 text-sm text-gray-600">Terminé le {date(cab.trial_ends_at)} : {cab.offre_site ? "votre site est hors ligne" : "votre page de prise de rendez-vous est en pause"}.</p>}
             {cab.subscription_status === "actif" && cab.abonnement_fin_periode && <p className="mt-1 text-sm text-gray-600">Prochaine échéance le {date(cab.abonnement_fin_periode)}.</p>}
           </div>
           <div className="text-right">
             <p className="text-sm text-gray-500">Tarif</p>
-            <p className="mt-1 text-2xl font-medium text-gray-950">{PRIX_MENSUEL_HT * nb} € <span className="text-sm font-normal text-gray-500">HT / mois</span></p>
-            <p className="text-sm text-gray-500">{PRIX_MENSUEL_HT} € × {nb} professionnel{nb > 1 ? "s" : ""}</p>
+            {auMois || cab.subscription_status !== "actif"
+              ? <p className="mt-1 text-2xl font-medium text-gray-950">{mensuel} € <span className="text-sm font-normal text-gray-500">HT / mois</span></p>
+              : <p className="mt-1 text-2xl font-medium text-gray-950">{annuel} € <span className="text-sm font-normal text-gray-500">HT / an</span></p>}
+            <p className="text-sm text-gray-500">{libelleFormule(cab)}</p>
+            {lignes.map((l) => <p key={l.code} className="text-xs text-gray-400">{l.libelle} : {l.prixMensuelHT} €{l.quantite > 1 ? ` × ${l.quantite}` : ""}</p>)}
           </div>
         </div>
 
@@ -78,18 +86,24 @@ export default async function AbonnementPage({ searchParams }: { searchParams: P
             <BoutonStripe action="portal">Gérer l&apos;abonnement et les factures</BoutonStripe>
           ) : e.essai ? (
             <>
-              <BoutonStripe action="checkout">Ajouter ma carte bancaire</BoutonStripe>
+              <div className="flex flex-wrap gap-3">
+                <BoutonStripe action="checkout" corps={{ periode: "mois" }}>Payer au mois · {mensuel} € HT</BoutonStripe>
+                <BoutonStripe action="checkout" corps={{ periode: "an" }} className="btn-outline disabled:opacity-50">Payer à l&apos;année · {annuel} € HT (-10 %)</BoutonStripe>
+              </div>
               <p className="mt-3 max-w-xl text-sm text-gray-500">
                 {essaiPreserve
-                  ? <>Votre essai continue : aucun prélèvement avant le {date(cab.trial_ends_at)}. Ensuite {PRIX_MENSUEL_HT * nb} € HT par mois, sans engagement.</>
-                  : <>Votre essai se termine dans moins de 48 h : le premier mois ({PRIX_MENSUEL_HT * nb} € HT) est prélevé à la validation. Sans engagement.</>}
+                  ? <>Votre essai continue : aucun prélèvement avant le {date(cab.trial_ends_at)}. Ensuite {mensuel} € HT par mois (ou {annuel} € HT par an), sans engagement.</>
+                  : <>Votre essai se termine dans moins de 48 h : la première échéance est prélevée à la validation. Sans engagement.</>}
               </p>
-              <p className="mt-2 max-w-xl text-sm text-gray-500">Sans carte à la fin de l&apos;essai, votre page de rendez-vous est mise en pause. Vous recevrez un rappel par e-mail 2 jours avant.</p>
+              <p className="mt-2 max-w-xl text-sm text-gray-500">Sans carte à la fin de l&apos;essai, {cab.offre_site ? "votre site est mis hors ligne" : "votre page de rendez-vous est mise en pause"}. Vous recevrez un rappel par e-mail 2 jours avant.</p>
             </>
           ) : (
             <>
-              <BoutonStripe action="checkout">Réactiver la prise de rendez-vous</BoutonStripe>
-              <p className="mt-3 text-sm text-gray-500">{PRIX_MENSUEL_HT * nb} € HT par mois, prélevé dès aujourd&apos;hui. Sans engagement, résiliable à tout moment.</p>
+              <div className="flex flex-wrap gap-3">
+                <BoutonStripe action="checkout" corps={{ periode: "mois" }}>{cab.offre_site ? "Remettre mon site en ligne" : "Réactiver la prise de rendez-vous"} · {mensuel} € HT / mois</BoutonStripe>
+                <BoutonStripe action="checkout" corps={{ periode: "an" }} className="btn-outline disabled:opacity-50">À l&apos;année · {annuel} € HT (-10 %)</BoutonStripe>
+              </div>
+              <p className="mt-3 text-sm text-gray-500">Prélevé dès aujourd&apos;hui. Sans engagement, résiliable à tout moment.</p>
             </>
           )}
         </div>

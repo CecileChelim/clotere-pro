@@ -5,7 +5,8 @@ import { LienResa } from "@/components/dashboard/LienResa";
 import { createClient } from "@/lib/supabase/server";
 import { AgendaSyncBanner } from "@/components/dashboard/AgendaSyncBanner";
 import { BookingsList, type Booking } from "@/components/pro/BookingsList";
-import { MarketingPromoCard } from "@/components/dashboard/MarketingPromoCard";
+import { EnTetePage } from "@/components/dashboard/EnTetePage";
+import { RdvPresentation } from "@/components/mon-site/Upsells";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -14,8 +15,11 @@ export default async function DashboardPage() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase as any;
-  const { data: pro } = await db.from("professionals").select("id, prenom, slug, profession, google_calendar_connected, cabinet:cabinets(google_place_id, google_business_url, google_reviews_url)").eq("auth_user_id", user.id).maybeSingle();
+  const { data: pro } = await db.from("professionals").select("id, prenom, slug, profession, google_calendar_connected, cabinet:cabinets(google_place_id, google_business_url, google_reviews_url, offre_rdv, offre_site)").eq("auth_user_id", user.id).maybeSingle();
   if (!pro) redirect("/inscription");
+  // Formule « site + formulaire de contact » : la prise de rdv est à activer.
+  const cabPro = Array.isArray(pro.cabinet) ? pro.cabinet[0] : pro.cabinet;
+  if (cabPro?.offre_rdv === false) return <RdvPresentation page="rendez-vous" />;
 
   const { data, error } = await db
     .from("bookings")
@@ -46,13 +50,11 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <LienResa url={lienResa} />
+      <EnTetePage section="Rendez-vous" titre={`Bonjour ${pro.prenom}`} />
+      <div className="mt-6"><LienResa url={lienResa} /></div>
       {!pro.google_calendar_connected && <AgendaSyncBanner />}
 
-      <p className="eyebrow">Rendez-vous</p>
-      <h1 className="mt-2 text-4xl font-medium tracking-tight text-gray-950">Bonjour {pro.prenom}</h1>
-
-      <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {kpis.map((k) => (
           <div key={k.label} className="card p-5">
             <p className="text-sm text-gray-500">{k.label}</p>
@@ -62,8 +64,6 @@ export default async function DashboardPage() {
       </div>
 
       <BookingsList initial={bookings} profession={pro.profession} avisPossible={!!lienAvisGoogle(Array.isArray(pro.cabinet) ? pro.cabinet[0] : pro.cabinet)} />
-
-      <MarketingPromoCard profession={pro.profession} />
     </div>
   );
 }

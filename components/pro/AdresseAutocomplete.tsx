@@ -11,9 +11,11 @@ type Suggestion = { id: string; principal: string; secondaire: string };
 const jeton = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : String(Math.random()).slice(2));
 
 /** Champ adresse relié à Google Maps : on tape le nom du cabinet ou l'adresse, on choisit, les champs se remplissent. */
-export function AdresseAutocomplete({ value, onChange, onSelect, className, required, placeholder }: {
+export function AdresseAutocomplete({ value, onChange, onSelect, className, required, placeholder, src }: {
   value: string; onChange: (v: string) => void; onSelect: (l: LieuDetail) => void;
   className?: string; required?: boolean; placeholder?: string;
+  /** « createur » : utilisable sans être connecté (créateur de site), avec limite par IP. */
+  src?: string;
 }) {
   const [items, setItems] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
@@ -28,13 +30,13 @@ export function AdresseAutocomplete({ value, onChange, onSelect, className, requ
     const ctrl = new AbortController();
     const t = setTimeout(async () => {
       try {
-        const r = await fetch(`/api/places/autocomplete?q=${encodeURIComponent(value)}&s=${session.current}`, { signal: ctrl.signal });
+        const r = await fetch(`/api/places/autocomplete?q=${encodeURIComponent(value)}&s=${session.current}${src ? `&src=${src}` : ""}`, { signal: ctrl.signal });
         const j = await r.json();
         setItems(j.suggestions ?? []); setOpen(true); setActif(-1);
       } catch { /* requête annulée */ }
     }, 250);
     return () => { clearTimeout(t); ctrl.abort(); };
-  }, [value]);
+  }, [value, src]);
 
   useEffect(() => {
     const fermer = (e: MouseEvent) => { if (!boite.current?.contains(e.target as Node)) setOpen(false); };
@@ -45,7 +47,7 @@ export function AdresseAutocomplete({ value, onChange, onSelect, className, requ
   async function choisir(s: Suggestion) {
     setOpen(false); setItems([]); tape.current = false; setChargement(true);
     try {
-      const r = await fetch(`/api/places/details?id=${encodeURIComponent(s.id)}&s=${session.current}`);
+      const r = await fetch(`/api/places/details?id=${encodeURIComponent(s.id)}&s=${session.current}${src ? `&src=${src}` : ""}`);
       const { lieu } = (await r.json()) as { lieu: LieuDetail | null };
       if (lieu) { onChange(lieu.adresse || s.principal); onSelect(lieu); }
       else onChange(s.principal);

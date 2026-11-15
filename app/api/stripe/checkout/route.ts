@@ -2,12 +2,15 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe";
-import { PRIX_MENSUEL_HT } from "@/lib/abonnement";
-import { PROFESSIONS } from "@/lib/professions-config";
+import { lignesStripe } from "@/lib/abonnement-stripe";
+import type { Periode } from "@/lib/tarifs";
 
-// Ouvre une page de paiement Stripe pour l'abonnement du cabinet (69 € HT / mois / professionnel).
+// Ouvre une page de paiement Stripe pour l'abonnement de base du cabinet.
+// Formule selon les modules : widget (69 € HT / pro), site + contact (69 €), site + rdv (99 €). Au mois ou à l'année (-10 %).
 export async function POST(req: Request) {
   const origin = new URL(req.url).origin;
+  const { periode: p } = (await req.json().catch(() => ({}))) as { periode?: string };
+  const periode: Periode = p === "an" ? "an" : "mois";
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
@@ -17,10 +20,8 @@ export async function POST(req: Request) {
   if (pro.role === "membre") return NextResponse.json({ ok: false, error: "Seul le titulaire du cabinet peut gérer l'abonnement." }, { status: 403 });
 
   const db = createAdminClient();
-  const { data: cab } = await db.from("cabinets").select("id, nom, trial_ends_at, stripe_customer_id").eq("id", pro.cabinet_id).single();
+  const { data: cab } = await db.from("cabinets").select("id, nom, trial_ends_at, stripe_customer_id, offre_site, offre_rdv").eq("id", pro.cabinet_id).single();
   const { count } = await db.from("professionals").select("id", { count: "exact", head: true }).eq("cabinet_id", pro.cabinet_id);
-  const quantite = Math.max(1, count ?? 1);
-  const conf = PROFESSIONS[pro.profession === "comptable" ? "comptable" : "avocat"];
 
   // Si l'essai n'est pas terminé (> 48 h restantes), le premier prélèvement a lieu à sa fin.
   const finEssai = cab?.trial_ends_at ? Math.floor(new Date(cab.trial_ends_at).getTime() / 1000) : 0;
@@ -30,18 +31,9 @@ export async function POST(req: Request) {
     mode: "subscription",
     ...(cab?.stripe_customer_id ? { customer: cab.stripe_customer_id } : { customer_email: pro.email }),
     client_reference_id: pro.cabinet_id,
-    line_items: [process.env.STRIPE_PRICE_ID
-      ? { price: process.env.STRIPE_PRICE_ID, quantity: quantite }
-      : {
-          quantity: quantite,
-          price_data: {
-            currency: "eur", unit_amount: PRIX_MENSUEL_HT * 100, recurring: { interval: "month" },
-            tax_behavior: "exclusive",
-            product_data: { name: `${conf.brand} — prise de rendez-vous en ligne` },
-          },
-        }],
-    subscription_data: { metadata: { cabinet_id: pro.cabinet_id }, ...(garderEssai ? { trial_end: finEssai } : {}) },
-    metadata: { cabinet_id: pro.cabinet_id },
+    line_items: lignesStripe(cab ?? {}, count ?? 1, periode, pro.profession),
+    subscription_data: { metadata: { cabinet_id: pro.cabinet_id, periode }, ...(garderEssai ? { trial_end: finEssai } : {}) },
+    metadata: { cabinet_id: pro.cabinet_id, periode },
     allow_promotion_codes: true,
     billing_address_collection: "required",
     tax_id_collection: { enabled: true },

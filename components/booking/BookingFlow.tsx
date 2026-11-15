@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { PROFESSIONS, type Profession } from "@/lib/professions-config";
 import type { Horaires } from "@/lib/horaires";
 
@@ -101,7 +102,9 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false }: { p
   const [page, setPage] = useState(0);
   const [jourIdx, setJourIdx] = useState<number | null>(null);
   const [heure, setHeure] = useState<string | null>(null);
-  const [motif, setMotif] = useState<Motif | null>(null);
+  // Arrivée depuis le site du cabinet avec un motif choisi (?motif=<id>) : il est présélectionné.
+  const motifUrl = useSearchParams().get("motif");
+  const [motif, setMotif] = useState<Motif | null>(() => motifs.find((x) => x.id === motifUrl) ?? null);
   const [deja, setDeja] = useState<"non" | "oui" | "changer" | null>(null);
   const [message, setMessage] = useState("");
   const [c, setC] = useState({ nom: "", prenom: "", email: "", telephone: "" });

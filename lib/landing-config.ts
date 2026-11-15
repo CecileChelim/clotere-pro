@@ -12,7 +12,7 @@ export const SIGNUP = "/signup";
 export const LOGIN = "/login";
 
 export const CTA_DEMO: Cta = { href: DEMO_LINK, label: "Réserver une démo" };
-export const CTA_SITE: Cta = { href: SIGNUP, label: "Créer mon site" };
+export const CTA_SITE: Cta = { href: "/creer-mon-site", label: "Créer mon site" };
 
 /** Date de dernière mise à jour des landings (sitemap.xml). À changer quand le contenu des pages évolue. */
 export const LANDINGS_MAJ = "2026-11-14";

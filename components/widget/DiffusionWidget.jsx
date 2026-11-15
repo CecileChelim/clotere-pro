@@ -56,11 +56,13 @@ function LinkPill({ url }) {
   );
 }
 
-export default function DiffusionWidget({ proId, slug, base, nom, office, telephone, email, cabinetNom, metier = "Avocat" }) {
+/** `canal` : affiché dans les onglets de la page Agenda (un seul canal, sans en-tête ni onglets internes). */
+export default function DiffusionWidget({ proId, slug, base, nom, office, telephone, email, cabinetNom, metier = "Avocat", canal = "" }) {
   const bookingUrl = `${base}/rdv/${slug}`;
   const urlFor = (source) => `${bookingUrl}?source=${source}`;
 
-  const [tab, setTab] = useState("site");
+  const [tabLocal, setTab] = useState("site");
+  const tab = canal || tabLocal;
   const [mode, setMode] = useState("floating");
   const [color, setColor] = useState("#7c3aed");
   const [label, setLabel] = useState("Prendre RDV");
@@ -86,6 +88,9 @@ export default function DiffusionWidget({ proId, slug, base, nom, office, teleph
 
   return (
     <div>
+      {canal ? (
+        <div className="max-w-xl"><LinkPill url={bookingUrl} /></div>
+      ) : (<>
       <div className="flex w-full flex-wrap items-end justify-between gap-4 border-b border-gray-100 pb-6">
         <div>
           <p className="eyebrow">Diffusez votre lien</p>
@@ -100,6 +105,7 @@ export default function DiffusionWidget({ proId, slug, base, nom, office, teleph
         <ChannelTabs active={tab} onChange={setTab} status={status} />
         <div className="xl:w-[24rem]"><LinkPill url={bookingUrl} /></div>
       </div>
+      </>)}
 
       <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="min-w-0 xl:col-span-2">

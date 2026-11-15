@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 
-export function BoutonStripe({ action, children, className }: { action: "checkout" | "portal"; children: React.ReactNode; className?: string }) {
+export function BoutonStripe({ action, children, className, corps }: { action: "checkout" | "portal"; children: React.ReactNode; className?: string; corps?: Record<string, unknown> }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   return (
@@ -11,7 +11,7 @@ export function BoutonStripe({ action, children, className }: { action: "checkou
       <button type="button" disabled={busy} className={className ?? "btn-solid disabled:opacity-50"}
         onClick={async () => {
           setBusy(true); setError("");
-          const res = await fetch(`/api/stripe/${action}`, { method: "POST" });
+          const res = await fetch(`/api/stripe/${action}`, { method: "POST", ...(corps ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(corps) } : {}) });
           const j = await res.json().catch(() => ({}));
           if (j.url) { window.location.href = j.url; return; }
           setBusy(false); setError(j.error || "Une erreur est survenue.");

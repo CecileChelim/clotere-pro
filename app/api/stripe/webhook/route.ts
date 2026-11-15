@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   const o = event.data.object;
 
   if (event.type === "checkout.session.completed") {
-    const meta = (o.metadata as { cabinet_id?: string; option?: string }) ?? {};
+    const meta = (o.metadata as { cabinet_id?: string; option?: string; periode?: string }) ?? {};
     const cabinetId = meta.cabinet_id ?? (o.client_reference_id as string);
     if (cabinetId && estOption(meta.option)) {
       // Option payante : on l'active sans toucher à l'abonnement de base.
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
       const i = await infosCabinet(cabinetId);
       await notifierSlack(i.profession, `✨ Option ${OPTIONS[meta.option].nom} activée : ${i.cabinet}`, [["Contact", i.contact], ["Ville", i.ville]]);
     } else if (cabinetId) {
-      await db.from("cabinets").update({ stripe_customer_id: o.customer, stripe_subscription_id: o.subscription, subscription_status: "actif" }).eq("id", cabinetId);
+      await db.from("cabinets").update({ stripe_customer_id: o.customer, stripe_subscription_id: o.subscription, subscription_status: "actif", abonnement_periode: meta.periode === "an" ? "an" : "mois" }).eq("id", cabinetId);
       const i = await infosCabinet(cabinetId);
       await notifierSlack(i.profession, `💳 Abonnement activé : ${i.cabinet}`, [["Contact", i.contact], ["Ville", i.ville], ["Professionnels", String(i.nb)]]);
     }

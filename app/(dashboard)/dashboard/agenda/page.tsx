@@ -1,8 +1,11 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { AgendaSettings } from "@/components/pro/AgendaSettings";
+import { headers } from "next/headers";
+import { AgendaSettings, type Onglet } from "@/components/pro/AgendaSettings";
+import { EnTetePage } from "@/components/dashboard/EnTetePage";
 import type { MotifDraft } from "@/lib/professions-config";
 import { horairesDepuisRows } from "@/lib/horaires";
+import { RdvPresentation } from "@/components/mon-site/Upsells";
 
 export default async function DashboardAgendaPage({ searchParams }: { searchParams: Promise<{ agenda?: string; detail?: string; onglet?: string }> }) {
   const { agenda, detail, onglet } = await searchParams;
@@ -12,8 +15,12 @@ export default async function DashboardAgendaPage({ searchParams }: { searchPara
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase as any;
-  const { data: pro } = await db.from("professionals").select("id, google_calendar_connected, agenda_provider").eq("auth_user_id", user.id).maybeSingle();
+  const { data: pro } = await db.from("professionals").select("id, slug, prenom, nom, email, telephone, profession, google_calendar_connected, agenda_provider, cabinet:cabinets(offre_rdv, nom, telephone)").eq("auth_user_id", user.id).maybeSingle();
   if (!pro) redirect("/inscription");
+  const cab = Array.isArray(pro.cabinet) ? pro.cabinet[0] : pro.cabinet;
+  if (cab?.offre_rdv === false) return <RdvPresentation page="agenda" />;
+  const host = (await headers()).get("host") ?? "avocat.clotere.fr";
+  const base = `${host.includes("localhost") ? "http" : "https"}://${host}`;
 
   const { data: rows } = await db.from("motifs").select("*").eq("professional_id", pro.id).order("ordre");
   const motifs: MotifDraft[] = (rows ?? []).map((r: Record<string, unknown>) => ({
@@ -29,10 +36,14 @@ export default async function DashboardAgendaPage({ searchParams }: { searchPara
 
   return (
     <div>
-      <p className="eyebrow">Agenda</p>
-      <h1 className="mt-2 text-4xl font-medium tracking-tight text-gray-950">Agenda & prise de rendez-vous</h1>
+      <EnTetePage section="Agenda" titre="Agenda & prise de rendez-vous" />
       <AgendaSettings proId={pro.id} motifsInit={motifs} connected={!!pro.google_calendar_connected} provider={pro.agenda_provider ?? null} retour={agenda ?? null} detail={detail ?? null}
-        horairesInit={horairesDepuisRows(dispo)} absencesInit={abs ?? []} ongletInit={onglet === "motifs" ? "motifs" : "agenda"} />
+        horairesInit={horairesDepuisRows(dispo)} absencesInit={abs ?? []} ongletInit={(["motifs", "site", "linkedin", "mail", "google"].includes(onglet ?? "") ? onglet : "agenda") as Onglet}
+        diffusion={{
+          proId: pro.id, slug: pro.slug, base, nom: `${pro.profession === "avocat" ? "Maître " : ""}${pro.prenom} ${pro.nom}`,
+          office: cab?.nom || `Cabinet ${pro.nom}`, cabinetNom: cab?.nom ?? null, telephone: cab?.telephone || pro.telephone,
+          email: pro.email, metier: pro.profession === "comptable" ? "Expert-comptable" : "Avocat",
+        }} />
     </div>
   );
 }

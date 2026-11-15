@@ -35,3 +35,19 @@ export async function tropDeDemandesClient(proId: string, email: string) {
     .eq("professional_id", proId).eq("client_email", email).eq("statut", "demandé");
   return (count ?? 0) >= 3;
 }
+
+/**
+ * Limite générique par IP (hachée) pour les appels publics coûteux, ex. l'autocomplétion Google du créateur de site.
+ * Réutilise la table rdv_tentatives avec une clé préfixée, sans se mélanger aux demandes de rdv.
+ */
+export async function limiteIp(req: Request, cle: string, limites: { fenetreMin: number; max: number }[]): Promise<boolean> {
+  const db = createAdminClient();
+  const ip_hash = `${cle}:` + createHash("sha256").update(`${ipDe(req)}|${process.env.AGENDA_ENC_KEY ?? "clotere"}`).digest("hex");
+  for (const l of limites) {
+    const depuis = new Date(Date.now() - l.fenetreMin * 60000).toISOString();
+    const { count } = await db.from("rdv_tentatives").select("id", { count: "exact", head: true }).eq("ip_hash", ip_hash).gte("created_at", depuis);
+    if ((count ?? 0) >= l.max) return true;
+  }
+  await db.from("rdv_tentatives").insert({ ip_hash });
+  return false;
+}
