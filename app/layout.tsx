@@ -3,6 +3,7 @@ import { Newsreader, Instrument_Sans } from "next/font/google";
 import "./globals.css";
 import { headers } from "next/headers";
 import { professionFromHost } from "@/lib/professions-config";
+import { SNIPPET_GTM } from "@/lib/analytics";
 
 const newsreader = Newsreader({
   subsets: ["latin"],
@@ -60,6 +61,10 @@ export default async function RootLayout({
 }>) {
   return (
     <html lang="fr" data-theme={professionFromHost((await headers()).get("host"))} className={`${newsreader.variable} ${instrumentSans.variable}`}>
+      <head>
+        {/* Google Tag Manager : un seul conteneur, choisi selon le domaine (rien en local ni sur les previews). */}
+        <script dangerouslySetInnerHTML={{ __html: SNIPPET_GTM }} />
+      </head>
       <body className="antialiased">{children}</body>
     </html>
   );

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { DashboardNav } from "@/components/dashboard/DashboardNav";
 import { SignOutButton } from "@/components/dashboard/SignOutButton";
 import { MarketingPromoCard } from "@/components/dashboard/MarketingPromoCard";
+import { FinDeParcours } from "@/components/analytics/FinDeParcours";
 import { PROFESSIONS } from "@/lib/professions-config";
 import { GardeAbonnement } from "@/components/dashboard/AbonnementActions";
 import { etatAbonnement } from "@/lib/abonnement";
@@ -48,6 +49,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="relative min-h-screen bg-white">
+      <FinDeParcours />
       <div className="bg-brand-gradient absolute inset-x-2 top-2 h-72 rounded-[2rem] ring-1 ring-black/5 ring-inset" />
       <div className="relative mx-auto max-w-[1600px] px-4 sm:px-6">
         <header className="flex items-center justify-between gap-4 py-8">

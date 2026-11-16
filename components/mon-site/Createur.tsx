@@ -13,6 +13,7 @@ import { contenuParDefaut } from "@/lib/site/contenu";
 import { PALETTES, palette } from "@/lib/site/palettes";
 import { slugSite } from "@/lib/site/slug";
 import { PRIX } from "@/lib/tarifs";
+import { FLAG_SITE_CREE, pushEvent } from "@/lib/analytics";
 import { SECTIONS, SECTIONS_PAR_DEFAUT, TEMPLATES, type Formule, type SectionId, type SiteRendu, type Taille, type TemplateId } from "@/lib/site/types";
 import type { Brouillon } from "@/lib/site/serveur";
 
@@ -70,7 +71,8 @@ export function Createur({ profession, connecte, prefill }: { profession: Profes
   const majCab = (p: Partial<Brouillon["cabinet"]>) => setB((x) => ({ ...x, cabinet: { ...x.cabinet, ...p } }));
   const idx = ETAPES.findIndex((e) => e.id === etape);
   const aller = (e: Etape) => { setEtape(e); window.scrollTo({ top: 0 }); };
-  const suivant = () => aller(ETAPES[Math.min(idx + 1, ETAPES.length - 1)].id);
+  // Clic sur « Continuer » : numéro de l'étape quittée (1 Cabinet … 5 Couleurs). La création est mesurée par « site_cree ».
+  const suivant = () => { pushEvent({ event: "site_etape", etape: idx + 1 }); aller(ETAPES[Math.min(idx + 1, ETAPES.length - 1)].id); };
   const precedent = () => (idx > 0 ? aller(ETAPES[idx - 1].id) : history.back());
 
   const nomCabinet = b.cabinet.nom || (b.nom ? `Cabinet ${b.nom}` : profession === "avocat" ? "Cabinet Dupont" : "Cabinet Martin");
@@ -331,7 +333,7 @@ function Inscription({ b, connecte, supabase, nomCabinet }: { b: Brouillon; conn
     const r = await fetch("/api/site/creer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }).catch(() => null);
     const j = (await r?.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
     if (j?.ok) {
-      try { localStorage.removeItem(CLE_BROUILLON); } catch { /* */ }
+      try { localStorage.removeItem(CLE_BROUILLON); sessionStorage.setItem(FLAG_SITE_CREE, b.formule); } catch { /* */ }
       window.location.href = "/dashboard/site?nouveau=1";
       return;
     }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { FLAG_INSCRIPTION, pushEvent } from "@/lib/analytics";
 import { createBrowserClient } from "@supabase/ssr";
 import { AvatarUploader } from "@/components/onboarding/AvatarUploader";
 import { MotifsEditor } from "@/components/pro/MotifsEditor";
@@ -53,6 +54,17 @@ export function InscriptionWizard({ profession, userId, userEmail, taxo, initial
   const [motifs, setMotifs] = useState<MotifDraft[]>([]);
 
   const idx = ETAPES.findIndex((e) => e.id === step);
+
+  // Arrivée sur /inscription avec un compte neuf (aucune fiche encore créée) : une seule fois par compte, même si la page est rechargée.
+  useEffect(() => {
+    if (initialStep !== "vous") return;
+    try {
+      const k = `clotere-compte-cree-${userId}`;
+      if (localStorage.getItem(k)) return;
+      localStorage.setItem(k, "1");
+    } catch { /* stockage indisponible : on envoie quand même */ }
+    pushEvent({ event: "compte_cree" });
+  }, [initialStep, userId]);
   const fail = (m: string) => { setError(m); setSaving(false); };
 
   function remplirDepuisGoogle(l: LieuDetail) {
@@ -92,6 +104,8 @@ export function InscriptionWizard({ profession, userId, userEmail, taxo, initial
   async function suivant(e?: React.FormEvent) {
     e?.preventDefault();
     setError(""); setSaving(true);
+    // Clic sur « Continuer » : numéro de l'étape quittée (1 à 4). « Terminer » (étape 5) est mesuré par « inscription » sur le dashboard.
+    if (step !== "motifs") pushEvent({ event: "inscription_etape", etape: idx + 1 });
 
     if (step === "vous") { setSaving(false); setStep("cabinet"); return; }
 
@@ -139,6 +153,7 @@ export function InscriptionWizard({ profession, userId, userEmail, taxo, initial
       if (e1) return fail("Impossible d'enregistrer les motifs.");
       await supabase.from("professionals").update({ onboarding_step: "horaires" }).eq("id", proId);
       await fetch("/api/notif/inscription", { method: "POST" }).catch(() => {});
+      try { sessionStorage.setItem(FLAG_INSCRIPTION, "1"); } catch { /* ignore */ }
       window.location.href = "/dashboard";
     }
   }

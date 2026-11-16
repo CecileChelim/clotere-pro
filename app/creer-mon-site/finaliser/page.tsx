@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { CLE_BROUILLON } from "@/components/mon-site/Createur";
+import { FLAG_SITE_CREE } from "@/lib/analytics";
 
 /* Retour de la connexion Google ou du lien reçu par e-mail : on crée le site à partir du brouillon gardé dans le navigateur. */
 export default function FinaliserPage() {
@@ -20,7 +21,10 @@ export default function FinaliserPage() {
       const r = await fetch("/api/site/creer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(brouillon) }).catch(() => null);
       const j = (await r?.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
       if (j?.ok) {
-        try { localStorage.removeItem(CLE_BROUILLON); } catch { /* */ }
+        try {
+          localStorage.removeItem(CLE_BROUILLON);
+          sessionStorage.setItem(FLAG_SITE_CREE, (brouillon as { formule?: string }).formule === "contact" ? "contact" : "rdv");
+        } catch { /* */ }
         window.location.href = "/dashboard/site?nouveau=1";
         return;
       }
