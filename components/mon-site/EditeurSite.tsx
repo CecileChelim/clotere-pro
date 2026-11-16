@@ -259,7 +259,7 @@ function Photo({ l, v, on, userId }: { l: string; v: string | null; on: (v: stri
     setEtat("envoi");
     const supabase = createClient();
     const chemin = `${userId}/${Date.now()}.${f.name.split(".").pop() ?? "jpg"}`;
-    const { error } = await supabase.storage.from("sites").upload(chemin, f, { upsert: true });
+    const { error } = await supabase.storage.from("sites").upload(chemin, f, { upsert: false, contentType: f.type });
     if (error) { setEtat("erreur"); return; }
     on(supabase.storage.from("sites").getPublicUrl(chemin).data.publicUrl);
     setEtat("");
