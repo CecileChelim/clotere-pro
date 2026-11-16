@@ -114,6 +114,7 @@ export function contenuParDefaut(e: Entree): Contenu {
         : "Laissez-nous un message, nous vous répondons sous 48 h ouvrées.",
       horaires: "Du lundi au vendredi, 9h – 19h",
     },
+    credits: { couverture: "", couvertureLien: "" },
     chiffres: [
       { valeur: "48 h", label: "pour vous répondre" },
       { valeur: "Visio", label: "ou au cabinet" },

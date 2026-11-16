@@ -96,6 +96,9 @@ export default async function MentionsLegalesPage({ params }: Params) {
 
           <Bloc titre="Propriété intellectuelle">
             <p>Les textes, logos et photographies de ce site sont la propriété de {editeur} ou de leurs auteurs. Toute reproduction sans autorisation est interdite.</p>
+            {d.contenu.credits.couverture && d.couverture?.includes("images.unsplash.com") && (
+              <p>Photo de couverture : <a href={d.contenu.credits.couvertureLien} target="_blank" rel="noopener noreferrer" className="underline">{d.contenu.credits.couverture}</a> sur <a href="https://unsplash.com/?utm_source=clotere&utm_medium=referral" target="_blank" rel="noopener noreferrer" className="underline">Unsplash</a>.</p>
+            )}
           </Bloc>
         </div>
       </main>

@@ -51,7 +51,7 @@ export function TemplateLight({ d }: { d: SiteRendu }) {
 
       {a(d, "apropos") && (
         <section id="apropos" className={`flex flex-col gap-12 py-20 @3xl:flex-row @3xl:items-center @3xl:gap-24 @3xl:py-28 ${px}`}>
-          <Visuel src={d.pro.photo} alt={nomAffiche(d)} initiales={initiales} className="aspect-[5/6] w-full rounded-2xl @3xl:w-[36%]" />
+          <Visuel src={d.pro.photo} alt={nomAffiche(d)} initiales={initiales} className="aspect-[4/5] w-full max-w-[280px] shrink-0 rounded-2xl @3xl:w-[280px]" />
           <div className="flex-1">
             <Surtitre>À propos</Surtitre>
             <H2>{c.apropos.titre}</H2>

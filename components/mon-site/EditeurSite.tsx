@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Apercu } from "@/components/mon-site/Apercu";
+import { ChoixUnsplash } from "@/components/mon-site/ChoixUnsplash";
 import { Onglets } from "@/components/dashboard/EnTetePage";
 import { PALETTES } from "@/lib/site/palettes";
 import { PRIX } from "@/lib/tarifs";
@@ -76,7 +77,11 @@ export function EditeurSite({ initial, userId, messages, publication, nbNonLus =
               <Champ l="Sur-titre" v={c.hero.surtitre} on={(v) => majC("hero", { ...c.hero, surtitre: v })} />
               <Champ l="Titre" v={c.hero.titre} on={(v) => majC("hero", { ...c.hero, titre: v })} long />
               <Champ l="Accroche" v={c.hero.accroche} on={(v) => majC("hero", { ...c.hero, accroche: v })} long />
-              <Photo l="Image de couverture" v={e.couverture} userId={userId} on={(v) => maj({ couverture: v })} />
+              <Photo l="Image de couverture" v={e.couverture} userId={userId} on={(v) => maj({ couverture: v, contenu: { ...e.contenu, credits: { couverture: "", couvertureLien: "" } } })} />
+              <ChoixUnsplash suggestions={initial.profession === "avocat"
+                  ? ["bureau d'avocat", "bibliothèque juridique", "salle de réunion", initial.cabinet.ville || "ville", "bureau lumineux"]
+                  : ["bureau moderne", "réunion de travail", "espace de travail", initial.cabinet.ville || "ville", "bureau lumineux"]}
+                onChoix={(url, auteur, lien) => maj({ couverture: url, contenu: { ...e.contenu, credits: { couverture: auteur, couvertureLien: lien } } })} />
               {e.template !== "light" && (
                 <div className="space-y-2">
                   <p className={lab}>Chiffres clés</p>

@@ -40,6 +40,8 @@ export type Contenu = {
   actualites: { titre: string; items: { titre: string; date: string; texte: string }[] };
   contact: { titre: string; texte: string; horaires: string };
   chiffres: { valeur: string; label: string }[];
+  /** Crédit de la photo de couverture quand elle vient d'Unsplash (affiché dans les mentions légales). */
+  credits: { couverture: string; couvertureLien: string };
 };
 
 /** Tout ce qu'il faut pour afficher un site (aperçu du créateur, page publique, éditeur). */

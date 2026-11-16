@@ -108,7 +108,7 @@ export function TemplatePerformance({ d }: { d: SiteRendu }) {
 
       {a(d, "apropos") && (
         <section id="apropos" className={`flex flex-col gap-12 py-20 @3xl:flex-row @3xl:items-center @3xl:gap-16 @3xl:py-24 ${px}`}>
-          <Visuel src={d.pro.photo} alt={nomAffiche(d)} initiales={initiales} className="aspect-[13/12] w-full rounded-2xl @3xl:w-[42%]" />
+          <Visuel src={d.pro.photo} alt={nomAffiche(d)} initiales={initiales} className="aspect-square w-full max-w-[320px] shrink-0 rounded-2xl @3xl:w-[320px]" />
           <div className="flex-1">
             <Kicker>Le cabinet</Kicker>
             <H2 gauche>{c.apropos.titre}</H2>

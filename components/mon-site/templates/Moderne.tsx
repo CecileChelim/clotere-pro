@@ -64,7 +64,7 @@ export function TemplateModerne({ d }: { d: SiteRendu }) {
             {c.apropos.texte2 && <p className="mt-5 text-lg leading-[1.7] opacity-80">{c.apropos.texte2}</p>}
             <p className="mt-8 text-sm font-bold">{c.apropos.signature}</p>
           </div>
-          <Visuel src={d.pro.photo} alt={nomAffiche(d)} initiales={initiales} className="aspect-[5/6] w-full @3xl:w-[40%]" />
+          <Visuel src={d.pro.photo} alt={nomAffiche(d)} initiales={initiales} className="aspect-[4/5] w-full max-w-[340px] shrink-0 @3xl:w-[340px]" />
         </section>
       )}
 
