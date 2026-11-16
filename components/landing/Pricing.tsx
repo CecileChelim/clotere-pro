@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { DEMO_LINK, SIGNUP, type LandingConfig } from "@/lib/landing-config";
+import { CTA_SITE, DEMO_LINK, SIGNUP, type LandingConfig } from "@/lib/landing-config";
 import { CheckIcon, ClockIcon, CrossIcon, SectionHeading } from "./ui";
 import { btnMd, btnPrimary, btnSecondary, btnSoft } from "./styles";
 
@@ -26,7 +26,7 @@ const OFFRES: Offre[] = [
     nom: "Vitrine",
     accroche: "Pour être vu",
     prix: 69,
-    cta: { label: "Créer mon site", href: SIGNUP, style: "secondary" },
+    cta: { label: "Créer mon site", href: CTA_SITE.href, style: "secondary" },
     lignes: [
       ["Site créé en 10 min avec notre éditeur", "inclus"],
       ["Nom de domaine et hébergement en France", "inclus"],
@@ -44,7 +44,7 @@ const OFFRES: Offre[] = [
     prix: 99,
     badge: { label: "LA PLUS POPULAIRE", plein: true },
     vedette: true,
-    cta: { label: "Créer mon site", href: SIGNUP, style: "primary" },
+    cta: { label: "Créer mon site", href: CTA_SITE.href, style: "primary" },
     lignes: [
       ["Tout l’offre Vitrine", "inclus"],
       ["Module de prise de rendez-vous qualifié", "inclus"],
