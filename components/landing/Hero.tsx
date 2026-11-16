@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { Cta, LandingConfig } from "@/lib/landing-config";
+import { CTA_SITE, DEMO_LINK, type Cta, type LandingConfig } from "@/lib/landing-config";
 import SiteNav from "./SiteNav";
 import { CtaLink } from "./ui";
 
@@ -51,7 +51,7 @@ export default function Hero({
           <p className="max-w-[820px] text-[17px] leading-[1.55] text-nuit/75 sm:text-[19px]">{subtitle}</p>
           <div className="flex flex-wrap justify-center gap-3 pt-2">
             {ctas.map((c, i) => (
-              <CtaLink key={c.label} cta={{ ...c, style: c.style ?? (i === 0 ? "primary" : "secondary") }} />
+              <CtaLink key={c.label} cta={{ ...c, style: c.style ?? (i === 0 ? "primary" : "secondary") }} dataCta={c.href === CTA_SITE.href ? "hero" : c.href === DEMO_LINK ? "demo_hero" : undefined} />
             ))}
           </div>
           {note && <p className="text-[13px] text-nuit/55">{note}</p>}

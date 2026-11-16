@@ -27,6 +27,7 @@ const ETAPES: { id: Etape; label: string }[] = [
   { id: "offre", label: "Contact" }, { id: "couleurs", label: "Couleurs" }, { id: "inscription", label: "Enregistrer" },
 ];
 export const CLE_BROUILLON = "clotere-site-brouillon";
+const NOM_ETAPE: Record<Etape, string> = { cabinet: "cabinet", template: "style", pages: "pages", offre: "contact", couleurs: "couleurs", inscription: "enregistrer" };
 
 const input = "w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-[15px] text-nuit outline-none transition placeholder:text-gray-400 focus:border-brand focus:ring-2 focus:ring-brand/15";
 const label = "mb-1.5 block text-sm font-semibold text-nuit";
@@ -71,8 +72,11 @@ export function Createur({ profession, connecte, prefill }: { profession: Profes
   const majCab = (p: Partial<Brouillon["cabinet"]>) => setB((x) => ({ ...x, cabinet: { ...x.cabinet, ...p } }));
   const idx = ETAPES.findIndex((e) => e.id === etape);
   const aller = (e: Etape) => { setEtape(e); window.scrollTo({ top: 0 }); };
-  // Clic sur « Continuer » : numéro de l'étape quittée (1 Cabinet … 5 Couleurs). La création est mesurée par « site_cree ».
-  const suivant = () => { pushEvent({ event: "site_etape", etape: idx + 1 }); aller(ETAPES[Math.min(idx + 1, ETAPES.length - 1)].id); };
+  const suivant = () => aller(ETAPES[Math.min(idx + 1, ETAPES.length - 1)].id);
+  // Tracking : un push à l'affichage de chaque étape (l'URL ne change pas). Aucune donnée saisie dans les paramètres.
+  useEffect(() => {
+    pushEvent({ event: "inscription_etape", etape: idx + 1, etape_nom: NOM_ETAPE[etape] });
+  }, [etape, idx]);
   const precedent = () => (idx > 0 ? aller(ETAPES[idx - 1].id) : history.back());
 
   const nomCabinet = b.cabinet.nom || (b.nom ? `Cabinet ${b.nom}` : profession === "avocat" ? "Cabinet Dupont" : "Cabinet Martin");

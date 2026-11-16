@@ -17,6 +17,8 @@ type Offre = {
   lignes: Ligne[];
   /** Carte mise en avant (bordure couleur profession). */
   vedette?: boolean;
+  /** Identifiant du bouton pour le tracking GTM (data-cta). */
+  dataCta?: string;
   /** Offre pas encore ouverte (prix grisé, fond teinté). */
   bientot?: boolean;
 };
@@ -24,6 +26,7 @@ type Offre = {
 const OFFRES: Offre[] = [
   {
     nom: "Vitrine",
+    dataCta: "tarif_vitrine",
     accroche: "Pour être vu",
     prix: 69,
     cta: { label: "Créer mon site", href: CTA_SITE.href, style: "secondary" },
@@ -40,6 +43,7 @@ const OFFRES: Offre[] = [
   },
   {
     nom: "Rendez-vous",
+    dataCta: "tarif_rdv",
     accroche: "Pour obtenir des clients",
     prix: 99,
     badge: { label: "LA PLUS POPULAIRE", plein: true },
@@ -56,6 +60,7 @@ const OFFRES: Offre[] = [
   },
   {
     nom: "Croissance",
+    dataCta: "etre_prevenu",
     accroche: "Pour recevoir des dossiers",
     prix: 169,
     badge: { label: "OUVRE BIENTÔT", plein: false },
@@ -124,11 +129,11 @@ function Carte({ o, annuelActif, sansAnnuel = false }: { o: Offre; annuelActif: 
       </p>
       )}
       {external ? (
-        <a href={o.cta.href} target="_blank" rel="noopener noreferrer" className={`${ctaCls} ${btnMd} w-full`}>
+        <a href={o.cta.href} target="_blank" rel="noopener noreferrer" className={`${ctaCls} ${btnMd} w-full`} data-cta={o.dataCta}>
           {o.cta.label}
         </a>
       ) : (
-        <Link href={o.cta.href} className={`${ctaCls} ${btnMd} w-full`}>
+        <Link href={o.cta.href} className={`${ctaCls} ${btnMd} w-full`} data-cta={o.dataCta}>
           {o.cta.label}
         </Link>
       )}

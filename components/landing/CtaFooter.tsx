@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { isExternal, type Cta, type LandingConfig } from "@/lib/landing-config";
+import { CTA_SITE, DEMO_LINK, isExternal, type Cta, type LandingConfig } from "@/lib/landing-config";
 import { Logo } from "./SiteNav";
 import { CtaLink } from "./ui";
 import { eyebrow } from "./styles";
@@ -17,7 +17,7 @@ export default function CtaFooter({ conf, title, subtitle, ctas }: { conf: Landi
         <p className="text-[17px] text-nuit/70 sm:text-[18px]">{subtitle}</p>
         <div className="flex flex-wrap justify-center gap-3 pt-3">
           {ctas.map((c, i) => (
-            <CtaLink key={c.label} cta={{ ...c, style: c.style ?? (i === 0 ? "primary" : "secondary") }} />
+            <CtaLink key={c.label} cta={{ ...c, style: c.style ?? (i === 0 ? "primary" : "secondary") }} dataCta={c.href === CTA_SITE.href ? "final" : c.href === DEMO_LINK ? "demo_final" : undefined} />
           ))}
         </div>
       </div>

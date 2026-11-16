@@ -125,7 +125,7 @@ export default function SiteNav({ conf, espace }: { conf: LandingConfig; espace?
           )}
         </div>
         <div className="hidden min-[480px]:block">
-          <Link href={CTA_SITE.href} className={primary}>
+          <Link href={CTA_SITE.href} className={primary} data-cta="header">
             {CTA_SITE.label}
           </Link>
         </div>
@@ -202,7 +202,7 @@ export default function SiteNav({ conf, espace }: { conf: LandingConfig; espace?
               ))}
             </ul>
             <div className="flex flex-col gap-3 border-t border-black/10 pt-6">
-              <Link href={CTA_SITE.href} className={primary}>
+              <Link href={CTA_SITE.href} className={primary} data-cta="header">
                 {CTA_SITE.label}
               </Link>
               {espace ? (

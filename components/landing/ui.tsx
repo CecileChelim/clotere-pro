@@ -4,17 +4,18 @@ import { isExternal, type Cta } from "@/lib/landing-config";
 import { btnMd, btnPrimary, btnSecondary, eyebrow } from "./styles";
 
 /** Lien-bouton : externe (nouvel onglet) ou interne (next/link). */
-export function CtaLink({ cta, className }: { cta: Cta; className?: string }) {
+/** `dataCta` : identifiant du bouton pour le tracking GTM (attribut data-cta, posé sur le <a> lui-même). */
+export function CtaLink({ cta, className, dataCta }: { cta: Cta; className?: string; dataCta?: string }) {
   const cls = className ?? `${cta.style === "secondary" ? btnSecondary : btnPrimary} ${btnMd}`;
   if (isExternal(cta.href)) {
     return (
-      <a href={cta.href} target="_blank" rel="noopener noreferrer" className={cls}>
+      <a href={cta.href} target="_blank" rel="noopener noreferrer" className={cls} data-cta={dataCta}>
         {cta.label}
       </a>
     );
   }
   return (
-    <Link href={cta.href} className={cls}>
+    <Link href={cta.href} className={cls} data-cta={dataCta}>
       {cta.label}
     </Link>
   );
