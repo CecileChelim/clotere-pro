@@ -15,6 +15,9 @@ export type MotifDraft = {
   prix_type: "gratuit" | "payant" | "non_affiche";
   prix_euros: number | null;
   actif: boolean;
+  /** Domaine de la taxonomie (ex. avocat-travail) : détermine les questions posées au client. */
+  domaine_id?: string | null;
+  questionnaire_actif?: boolean;
 };
 
 type Domaine = { id: string; label: string; description: string };
@@ -68,7 +71,7 @@ export function motifsDepuisDomaines(p: Profession, ids: string[]): MotifDraft[]
   const conf = PROFESSIONS[p];
   const parDomaine = conf.domaines.filter((d) => ids.includes(d.id)).map<MotifDraft>((d) => ({
     libelle: `${conf.prefixeMotif} – ${d.label}`, description: d.description,
-    duree_min: 30, modes: ["visio", "telephone"], prix_type: "gratuit", prix_euros: null, actif: true,
+    duree_min: 30, modes: ["visio", "telephone"], prix_type: "gratuit", prix_euros: null, actif: true, domaine_id: `${p}-${d.id}`,
   }));
   return [{ ...conf.motifParDefaut }, ...parDomaine];
 }

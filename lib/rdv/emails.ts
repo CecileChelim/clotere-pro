@@ -78,6 +78,11 @@ function layout(r: RdvComplet, titre: string, corps: string) {
   </td></tr></table></body></html>`);
 }
 
+/** Réponses du client au questionnaire du motif (e-mails au pro). */
+const reponsesHtml = (r: RdvComplet) => !r.reponses?.length ? "" : `<table role="presentation" style="width:100%;border-collapse:collapse;margin:18px 0;border:1px solid #e5e7eb;border-radius:12px">
+    ${r.reponses.map((x) => `<tr><td style="padding:8px 14px;color:#6b7280;font-size:13px;width:45%;vertical-align:top;border-bottom:1px solid #f3f4f6">${esc(x.question)}</td><td style="padding:8px 14px;color:#111827;font-size:14px;font-weight:600;border-bottom:1px solid #f3f4f6">${esc(x.reponse)}</td></tr>`).join("")}
+  </table>`;
+
 const bonjour = (prenom: string | null, nom: string) => `<p>Bonjour ${esc(prenom || nom)},</p>`;
 const citation = (txt: string) =>
   `<div style="margin:18px 0;padding:16px 18px;border-left:3px solid ${ACCENT};background:#fafafa;border-radius:8px;color:#111827">${nl2br(txt)}</div>`;
@@ -104,6 +109,7 @@ export const mails = {
     html: layout(r, "Nouvelle demande de rendez-vous", `<p><strong>${esc(nomClient(r))}</strong> souhaite un rendez-vous${r.suivi_existant ? " (client existant)" : ""}.</p>
       ${recap(r, r.creneau_debut, true)}
       ${r.deja_avocat ? `<p style="font-size:14px"><strong>Déjà un ${r.pro.profession === "avocat" ? "avocat" : "expert-comptable"} ?</strong> ${esc({ non: "Non, pas encore", oui: "Oui", changer: "Oui, mais souhaite en changer" }[r.deja_avocat] ?? r.deja_avocat)}</p>` : ""}
+      ${reponsesHtml(r)}
       ${r.message ? citation(r.message) : ""}
       ${bouton(l.gerer, "Gérer la demande")}
       <p style="font-size:13px;color:#6b7280">Validez, refusez ou proposez d'autres créneaux en un clic, sans vous connecter.</p>`),
@@ -188,6 +194,14 @@ export const mails = {
       ${recap(r, r.creneau_debut, true)}${bouton(l.gerer, "Gérer la demande")}`),
   }),
 
+  /** Pro — le client a déposé un document sur sa page de rendez-vous. */
+  documentPro: (r: RdvComplet, l: Liens, libelle: string) => ({
+    sujet: `Nouveau document de ${nomClient(r)}`,
+    html: layout(r, "Un client vous a transmis un document", `<p><strong>${esc(nomClient(r))}</strong> a déposé un document pour son rendez-vous :</p>
+      ${citation(libelle)}${recap(r, r.creneau_debut, true)}${bouton(l.gerer, "Voir les documents")}
+      <p style="font-size:13px;color:#6b7280">Les documents sont supprimés définitivement quand vous clôturez le rendez-vous.</p>`),
+  }),
+
   /** Client — demande d'avis Google après un dossier mené à bien. */
   avisClient: (r: RdvComplet, lienAvis: string) => ({
     sujet: `Votre avis compte pour ${r.pro.cabinet?.nom || nomPro(r)}`,
@@ -205,7 +219,7 @@ export const mails = {
   }),
   rappelPro: (r: RdvComplet, l: Liens) => ({
     sujet: `Demain : ${nomClient(r)} — ${fmtDateHeure(r.creneau_debut)}`,
-    html: layout(r, "Rendez-vous de demain", `<p>Rendez-vous avec <strong>${esc(nomClient(r))}</strong>.</p>${recap(r, r.creneau_debut, true)}${r.message ? citation(r.message) : ""}${bouton(l.gerer, "Voir le rendez-vous", true)}`),
+    html: layout(r, "Rendez-vous de demain", `<p>Rendez-vous avec <strong>${esc(nomClient(r))}</strong>.</p>${recap(r, r.creneau_debut, true)}${reponsesHtml(r)}${r.message ? citation(r.message) : ""}${bouton(l.gerer, "Voir le rendez-vous", true)}`),
   }),
 };
 

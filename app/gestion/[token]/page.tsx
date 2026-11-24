@@ -8,6 +8,7 @@ import { DateTile } from "@/components/rdv/DateTile";
 import { fmtDateHeure, MODE_LABEL } from "@/lib/rdv/format";
 import { emailsDuRdv, libelleMotif, marque, nomClient, nomPro, rdvParTokenPro } from "@/lib/rdv/load";
 import { messageModele, messageRefusModele } from "@/lib/rdv/modeles";
+import { documentsDuRdv } from "@/lib/rdv/documents";
 
 export const metadata: Metadata = { title: "Gérer la demande de rendez-vous", robots: { index: false, follow: false } };
 
@@ -24,14 +25,17 @@ const EVENEMENTS: Record<string, { label: string; vers: "client" | "pro" }> = {
   relance_pro: { label: "Relance : demande sans réponse", vers: "pro" },
   rappel_client: { label: "Rappel la veille", vers: "client" },
   rappel_pro: { label: "Rappel la veille", vers: "pro" },
+  document_pro: { label: "Le client a déposé un document", vers: "pro" },
 };
+
+const fmtTaille = (o: number) => (o < 1024 * 1024 ? `${Math.max(1, Math.round(o / 1024))} Ko` : `${(o / 1024 / 1024).toFixed(1).replace(".", ",")} Mo`);
 
 
 export default async function GestionPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const r = await rdvParTokenPro(token);
   if (!r) notFound();
-  const echanges = await emailsDuRdv(r.id);
+  const [echanges, documents] = await Promise.all([emailsDuRdv(r.id), documentsDuRdv(r.id)]);
 
   return (
     <RdvShell cabinet={r.pro.cabinet?.nom || nomPro(r)} marque={marque(r)} profession={r.pro.profession}>
@@ -65,12 +69,27 @@ export default async function GestionPage({ params }: { params: Promise<{ token:
                 {r.client_tel}
               </a>
             )}
-            <a href={`mailto:${r.client_email}`} className="inline-flex items-center gap-2 text-violet-600 hover:underline">
+            {r.client_email && <a href={`mailto:${r.client_email}`} className="inline-flex items-center gap-2 text-violet-600 hover:underline">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg>
               {r.client_email}
-            </a>
+            </a>}
           </div>
         </div>
+
+        {/* Réponses au questionnaire */}
+        {r.reponses && r.reponses.length > 0 && (
+          <div className="border-t border-gray-100 px-6 py-5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Sa situation</p>
+            <dl className="mt-3 divide-y divide-gray-100 rounded-xl ring-1 ring-gray-200">
+              {r.reponses.map((x) => (
+                <div key={x.question} className="grid gap-1 px-4 py-2.5 sm:grid-cols-[45%_1fr] sm:gap-4">
+                  <dt className="text-sm text-gray-500">{x.question}</dt>
+                  <dd className="text-sm font-medium text-gray-900">{x.reponse}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        )}
 
         {/* Message */}
         <div className="border-t border-gray-100 px-6 py-5">
@@ -79,9 +98,33 @@ export default async function GestionPage({ params }: { params: Promise<{ token:
             : <p className="text-sm text-gray-400">Pas de message joint à la demande.</p>}
         </div>
 
+        {/* Documents déposés par le client */}
+        {r.statut !== "supprimé" && (
+          <div className="border-t border-gray-100 px-6 py-5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Documents du client</p>
+            {documents.length === 0 ? (
+              <p className="mt-2 text-sm text-gray-500">Aucun document pour le moment. Votre client peut vous transmettre ses PDF depuis la page de son rendez-vous (lien présent dans tous ses e-mails).</p>
+            ) : (
+              <ul className="mt-3 divide-y divide-gray-100 rounded-xl ring-1 ring-gray-200">
+                {documents.map((d) => (
+                  <li key={d.id} className="flex items-center gap-3 px-4 py-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 text-[10px] font-bold text-red-600">PDF</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium text-gray-900">{d.libelle}</span>
+                      <span className="block truncate text-xs text-gray-500">{d.nom_fichier} · {fmtTaille(d.taille)} · déposé le {fmtDateHeure(d.created_at)}</span>
+                    </span>
+                    <a href={`/api/rdv/gestion/${token}/documents/${d.id}`} className="shrink-0 rounded-full px-3 py-1.5 text-sm font-medium text-violet-700 ring-1 ring-violet-200 hover:bg-violet-50">Télécharger</a>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {documents.length > 0 && <p className="mt-2 text-xs text-gray-400">Ils seront supprimés définitivement à la clôture du rendez-vous : enregistrez-les dans votre dossier si besoin.</p>}
+          </div>
+        )}
+
         {/* Actions */}
         <div className="rounded-b-3xl border-t border-gray-100 bg-gray-50/70 px-6 py-5">
-          {r.statut === "supprimé" && <p className="text-sm text-gray-600">Vous avez supprimé ce rendez-vous. Il n&apos;apparaît plus dans votre liste.</p>}
+          {r.statut === "supprimé" && <p className="text-sm text-gray-600">Vous avez clôturé ce rendez-vous. Il n&apos;apparaît plus dans votre liste{r.client_email ? "" : " ; les documents et les données du client ont été supprimés"}.</p>}
           {r.statut === "refusé" && <p className="text-sm text-gray-600">Vous avez refusé cette demande. Le client a reçu un lien pour choisir un autre créneau.</p>}
           {r.statut === "annulé" && <p className="text-sm text-gray-600">Ce rendez-vous a été annulé{r.annule_par === "client" ? ` par le client${r.annulation_raison ? ` (${({ plus_besoin: "n'en a plus besoin", imprevu: "imprévu", autre_pro: "a trouvé quelqu'un d'autre", autre: "autre raison" } as Record<string, string>)[r.annulation_raison] ?? r.annulation_raison})` : ""}` : r.annule_par === "auto" ? " automatiquement (sans réponse sous 72 h)" : ""}.</p>}
           {r.statut === "confirmé" ? (

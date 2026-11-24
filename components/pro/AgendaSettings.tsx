@@ -15,8 +15,8 @@ export type Onglet = "agenda" | "motifs" | "site" | "linkedin" | "mail" | "googl
 export type DiffusionProps = { proId: string; slug: string; base: string; nom: string; office: string; cabinetNom: string | null; telephone: string | null; email: string; metier: string };
 const CANAL: Record<string, string> = { site: "site", linkedin: "linkedin", mail: "signature", google: "google" };
 
-export function AgendaSettings({ proId, motifsInit, connected, provider, retour, detail, horairesInit, absencesInit, ongletInit = "agenda", diffusion }: {
-  proId: string; motifsInit: MotifDraft[]; connected: boolean; provider: string | null; retour: string | null; detail?: string | null;
+export function AgendaSettings({ proId, motifsInit, domaines, connected, provider, retour, detail, horairesInit, absencesInit, ongletInit = "agenda", diffusion }: {
+  proId: string; motifsInit: MotifDraft[]; domaines: { id: string; label: string }[]; connected: boolean; provider: string | null; retour: string | null; detail?: string | null;
   horairesInit: Horaires; absencesInit: Absence[]; ongletInit?: Onglet; diffusion: DiffusionProps;
 }) {
   const [onglet, setOnglet] = useState<Onglet>(ongletInit);
@@ -33,6 +33,7 @@ export function AgendaSettings({ proId, motifsInit, connected, provider, retour,
     const { error: e2 } = await supabase.from("motifs").insert(valides.map((m, i) => ({
       professional_id: proId, libelle: m.libelle.trim(), description: m.description.trim() || null, duree_min: m.duree_min,
       modes: m.modes, prix_type: "gratuit", prix_euros: null, actif: m.actif, ordre: i,
+      domaine_id: m.domaine_id ?? null, questionnaire_actif: m.questionnaire_actif ?? true,
     })));
     setStatus(e1 || e2 ? "error" : "saved");
   }
@@ -98,7 +99,7 @@ export function AgendaSettings({ proId, motifsInit, connected, provider, retour,
         <p className="mb-4 text-sm text-gray-600">
           L&apos;ordre ci-dessous est celui affiché à vos clients. « Suivi de dossier existant » est toujours proposé en premier.
         </p>
-        <MotifsEditor motifs={motifs} onChange={(m) => { setMotifs(m); setStatus("idle"); }} />
+        <MotifsEditor motifs={motifs} domaines={domaines} onChange={(m) => { setMotifs(m); setStatus("idle"); }} />
         <div className="mt-6 flex items-center gap-4">
           <button type="button" onClick={save} disabled={status === "saving"} className="btn-solid disabled:opacity-60">
             {status === "saving" ? "Enregistrement…" : "Enregistrer les motifs"}

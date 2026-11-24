@@ -59,6 +59,10 @@ export function SupprimerRdv({ token, clientPrenom, avisPossible, aVenirConfirme
             </div>
 
             <div className="flex-1 space-y-6 p-6">
+              <p className="rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-700 ring-1 ring-black/5">
+                Les documents déposés par {clientPrenom}, ses coordonnées et les e-mails échangés seront <strong>définitivement supprimés</strong>. Téléchargez d&apos;abord ce dont vous avez besoin.
+              </p>
+
               {aVenirConfirme && (
                 <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200">
                   Ce rendez-vous est confirmé et n&apos;a pas encore eu lieu. Supprimer ne prévient pas {clientPrenom} : pour l&apos;informer, utilisez plutôt « Annuler » sur la page du rendez-vous.

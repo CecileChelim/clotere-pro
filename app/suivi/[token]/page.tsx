@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { RdvShell, StatutBadge } from "@/components/rdv/RdvShell";
 import { SuiviActions } from "@/components/rdv/SuiviActions";
 import { DateTile } from "@/components/rdv/DateTile";
+import { DepotDocuments } from "@/components/rdv/DepotDocuments";
+import { documentsDuRdv, peutDeposer } from "@/lib/rdv/documents";
 import { peutAnnulerClient } from "@/lib/rdv/actions";
 import { fmtDateHeure, MODE_LABEL } from "@/lib/rdv/format";
 import { adresseCabinet, libelleMotif, marque, nomPro, rdvParTokenClient } from "@/lib/rdv/load";
@@ -30,6 +32,7 @@ export default async function SuiviPage({ params }: { params: Promise<{ token: s
   const r = await rdvParTokenClient(token);
   if (!r) notFound();
   const tel = r.pro.cabinet?.telephone || r.pro.telephone;
+  const documents = peutDeposer(r) ? await documentsDuRdv(r.id) : [];
 
   return (
     <RdvShell cabinet={r.pro.cabinet?.nom || nomPro(r)} marque={marque(r)} profession={r.pro.profession}>
@@ -85,6 +88,8 @@ export default async function SuiviPage({ params }: { params: Promise<{ token: s
             <p className="mt-2 whitespace-pre-line text-[15px] leading-relaxed text-gray-800">{r.message_pro}</p>
           </div>
         )}
+
+        {peutDeposer(r) && <DepotDocuments token={token} initiaux={documents} nomPro={nomPro(r)} />}
 
         <div className="border-t border-gray-100 bg-gray-50/70 px-6 py-5">
           <SuiviActions token={token} statut={r.statut}

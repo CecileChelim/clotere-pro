@@ -167,9 +167,13 @@ export async function creerSite(user: { id: string; email: string }, b: Brouillo
     proId = pro.id;
     // Motifs de rendez-vous préparés à partir des domaines (utilisés si la prise de rdv est active).
     const motifs = motifsDepuisDomaines(b.profession, b.domaines);
+    // Domaine de la taxonomie (avocat-travail…) quand il existe : il porte les questions posées au client.
+    const { data: taxo } = await db.from("domaines").select("id").eq("profession", b.profession);
+    const connus = new Set((taxo ?? []).map((d: { id: string }) => d.id));
     await db.from("motifs").insert(motifs.map((m, i) => ({
       professional_id: proId, libelle: m.libelle, description: m.description, duree_min: m.duree_min, modes: m.modes,
       prix_type: m.prix_type, prix_euros: null, actif: m.actif, ordre: i,
+      domaine_id: m.domaine_id && connus.has(m.domaine_id) ? m.domaine_id : null,
     })));
   }
 

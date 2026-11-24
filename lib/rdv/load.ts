@@ -8,6 +8,7 @@ export type RdvComplet = {
   message: string | null; suivi_existant: boolean; deja_avocat: string | null; source: string | null;
   message_pro: string | null; creneaux_proposes: { debut: string; fin: string }[] | null;
   token_pro: string; token_client: string; created_at: string; annule_par: string | null; annulation_raison: string | null; agenda_event_id: string | null; visio_url: string | null;
+  reponses: { question: string; reponse: string }[] | null;
   motif: { libelle: string; duree_min: number; domaine_id: string | null } | null;
   pro: {
     id: string; prenom: string; nom: string; email: string; slug: string; telephone: string | null; profession: Profession; photo_url: string | null;
@@ -16,7 +17,7 @@ export type RdvComplet = {
 };
 
 const SELECT = `id, statut, creneau_debut, creneau_fin, mode, type_rdv, client_nom, client_prenom, client_email, client_tel, message,
-  suivi_existant, deja_avocat, source, message_pro, creneaux_proposes, token_pro, token_client, created_at, annule_par, annulation_raison, agenda_event_id, visio_url,
+  suivi_existant, deja_avocat, source, message_pro, creneaux_proposes, token_pro, token_client, created_at, annule_par, annulation_raison, agenda_event_id, visio_url, reponses,
   motif:motifs(libelle, duree_min, domaine_id),
   pro:professionals(id, prenom, nom, email, slug, telephone, profession, photo_url, cabinet:cabinets(nom, adresse, code_postal, ville, telephone, google_place_id, google_business_url, google_reviews_url))`;
 

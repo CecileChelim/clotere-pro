@@ -148,7 +148,7 @@ export function InscriptionWizard({ profession, userId, userEmail, taxo, initial
       const { error: e1 } = await supabase.from("motifs").insert(valides.map((m, i) => ({
         professional_id: proId, libelle: m.libelle.trim(), description: m.description.trim() || null, duree_min: m.duree_min,
         modes: m.modes, prix_type: "gratuit", prix_euros: null, actif: m.actif, ordre: i,
-        domaine_id: (m as MotifDraft & { domaine_id?: string | null }).domaine_id ?? null,
+        domaine_id: m.domaine_id ?? null, questionnaire_actif: m.questionnaire_actif ?? true,
       })));
       if (e1) return fail("Impossible d'enregistrer les motifs.");
       await supabase.from("professionals").update({ onboarding_step: "horaires" }).eq("id", proId);
@@ -262,7 +262,7 @@ export function InscriptionWizard({ profession, userId, userEmail, taxo, initial
               <div className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-600 ring-1 ring-black/5">
                 « <strong className="text-gray-950">Suivi de dossier existant</strong> » est toujours proposé en premier à vos clients : inutile de le créer.
               </div>
-              <MotifsEditor motifs={motifs} onChange={setMotifs} />
+              <MotifsEditor motifs={motifs} domaines={taxo} onChange={setMotifs} />
               <Suivant>Terminer</Suivant>
             </>
           )}

@@ -22,7 +22,7 @@ async function charger(slug: string) {
   if (error) console.error("[page rdv] erreur Supabase :", error.message);
   if (!pro) return null;
   const [{ data: motifs }, { data: dispo }, { data: ps }, taxo] = await Promise.all([
-    db.from("motifs").select("id, libelle, description, duree_min, modes, actif, ordre").eq("professional_id", pro.id).eq("actif", true).order("ordre"),
+    db.from("motifs").select("id, libelle, description, duree_min, modes, actif, ordre, domaine_id, questionnaire_actif").eq("professional_id", pro.id).eq("actif", true).order("ordre"),
     db.from("availability").select("jour_semaine, heure_debut, heure_fin, date").eq("professional_id", pro.id),
     db.from("pro_specialites").select("specialite_id").eq("professional_id", pro.id),
     chargerTaxonomie(db, pro.profession === "comptable" ? "comptable" : "avocat"),

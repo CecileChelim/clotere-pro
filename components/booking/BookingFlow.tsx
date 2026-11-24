@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { PROFESSIONS, type Profession } from "@/lib/professions-config";
 import type { Horaires } from "@/lib/horaires";
+import { questionnaireComplet, questionsVisibles } from "@/lib/rdv/questionnaires";
 
 export type BookingPro = {
   id: string; nomAffiche: string; initiales: string; photo: string | null; bio: string | null;
@@ -14,7 +15,7 @@ export type BookingPro = {
   expertise: { domaine: string; specialites: string[] }[];
   honoraires: { modes: string[]; paiement: string[]; services: string[] };
 };
-type Motif = { id: string; libelle: string; description: string | null; duree_min: number; modes: string[] | null };
+type Motif = { id: string; libelle: string; description: string | null; duree_min: number; modes: string[] | null; domaine_id?: string | null; questionnaire_actif?: boolean };
 type Mode = "cabinet" | "visio" | "telephone";
 
 /* ---------- Icônes (traits fins, style Heroicons) ---------- */
@@ -107,6 +108,7 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false }: { p
   const [motif, setMotif] = useState<Motif | null>(() => motifs.find((x) => x.id === motifUrl) ?? null);
   const [deja, setDeja] = useState<"non" | "oui" | "changer" | null>(null);
   const [message, setMessage] = useState("");
+  const [reponses, setReponses] = useState<Record<string, string>>({});
   const [c, setC] = useState({ nom: "", prenom: "", email: "", telephone: "" });
   const [consent, setConsent] = useState(false);
   const [sending, setSending] = useState(false);
@@ -147,6 +149,9 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false }: { p
   const jour = jourIdx !== null ? jours[jourIdx] : null;
   const motifsCompatibles = motifs.filter((m) => !mode || !(m.modes ?? []).length || (m.modes ?? []).includes(mode));
   const suivi = motif?.id === "suivi";
+  // Questions du domaine du motif (si le pro ne les a pas coupées).
+  const domaineQ = !suivi && motif?.questionnaire_actif !== false ? motif?.domaine_id ?? null : null;
+  const questions = questionsVisibles(domaineQ, reponses);
   const duree = motif?.duree_min ?? 30;
   const dateLabel = jour && heure ? `${JOURS_LONGS[jour.date.getDay()]} ${jour.date.getDate()} ${MOIS[jour.date.getMonth()]} à ${heure.replace(":", "h")}` : "";
   const STEPS = ["Créneau", "Motif", suivi ? "Message" : "Votre situation", "Coordonnées"];
@@ -165,6 +170,7 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false }: { p
         professional_id: pro.id, motif_id: suivi ? null : motif.id, mode,
         client_nom: c.nom, client_prenom: c.prenom, client_email: c.email, client_tel: c.telephone,
         message: message || (suivi ? "Suivi de dossier existant" : null), suivi_existant: suivi, deja_avocat: suivi ? null : deja,
+        reponses: questions.length ? reponses : undefined,
         creneau_debut: debut.toISOString(), creneau_fin: fin.toISOString(), source, hp: hp || undefined,
       }),
     });
@@ -454,7 +460,7 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false }: { p
                   {motifsCompatibles.map((m) => {
                     const on = motif?.id === m.id;
                     return (
-                      <button key={m.id} type="button" onClick={() => { setMotif(m); setStep(2); }} className={choice(on)}>
+                      <button key={m.id} type="button" onClick={() => { if (motif?.id !== m.id) setReponses({}); setMotif(m); setStep(2); }} className={choice(on)}>
                         <span className="min-w-0 flex-1">
                           <span className="block text-sm font-semibold text-gray-900">{m.libelle}</span>
                           {m.description && <span className="block text-[13px] text-gray-500">{m.description}</span>}
@@ -484,12 +490,30 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false }: { p
                     </div>
                   </>
                 )}
+                {questions.map((q) => (
+                  <div key={q.id}>
+                    <p className="mt-6 text-sm font-semibold text-gray-900">{q.label}{!q.requis && <span className="font-normal text-gray-400"> (facultatif)</span>}</p>
+                    {q.aide && <p className="mt-1 text-[13px] text-gray-500">{q.aide}</p>}
+                    {q.type === "date" ? (
+                      <input type="date" {...(q.futur ? { min: new Date().toISOString().slice(0, 10) } : { max: new Date().toISOString().slice(0, 10) })} value={reponses[q.id] ?? ""}
+                        onChange={(e) => setReponses({ ...reponses, [q.id]: e.target.value })} className={`${input} mt-3 sm:max-w-[220px]`} />
+                    ) : (
+                      <div className={`mt-3 grid gap-2 ${(q.options?.length ?? 0) > 3 ? "sm:grid-cols-2" : ""}`}>
+                        {q.options?.map((o) => (
+                          <button key={o} type="button" onClick={() => setReponses({ ...reponses, [q.id]: reponses[q.id] === o && !q.requis ? "" : o })} className={choice(reponses[q.id] === o)}>
+                            <Radio on={reponses[q.id] === o} /><span className="text-sm font-medium text-gray-900">{o}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
                 <p className="mt-6 text-sm font-semibold text-gray-900">{suivi ? "Votre message (facultatif)" : "Précisez votre question ou besoin"}</p>
                 <textarea rows={5} maxLength={500} value={message} onChange={(e) => setMessage(e.target.value)} className={`${input} mt-3 resize-none`}
                   placeholder={suivi ? "Référence ou objet de votre dossier…" : "Décrivez brièvement votre situation…"} />
                 <p className="mt-1.5 text-right text-xs text-gray-400">{message.length} / 500</p>
                 <div className="mt-6 flex justify-end">
-                  <button type="button" disabled={!suivi && (!deja || message.trim().length < 10)} onClick={() => setStep(3)} className={btn}>Continuer <I d={P.chevR} className="h-4 w-4" /></button>
+                  <button type="button" disabled={!suivi && (!deja || message.trim().length < 10 || !questionnaireComplet(domaineQ, reponses))} onClick={() => setStep(3)} className={btn}>Continuer <I d={P.chevR} className="h-4 w-4" /></button>
                 </div>
               </div>
             )}

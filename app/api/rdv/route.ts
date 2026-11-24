@@ -29,7 +29,7 @@ export async function POST(req: Request) {
       suivi_existant: !!b.suivi_existant,
       deja_avocat: ["non", "oui", "changer"].includes(b.deja_avocat) ? b.deja_avocat : null,
       source: s(b.source, 20) || "direct",
-    }, baseUrl(req));
+    }, baseUrl(req), b.reponses);
     return NextResponse.json({ ok: true, suivi: `/suivi/${r.token_client}` });
   } catch (e) {
     const msg = e instanceof ErreurRdv ? e.message : "Erreur inattendue";

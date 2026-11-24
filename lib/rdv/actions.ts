@@ -9,6 +9,8 @@ import { lienAvisGoogle } from "@/lib/google";
 import { creerDemandeAvis } from "@/lib/avis-serveur";
 import { estRaison, RAISONS_SUPPRESSION } from "./suppression";
 import { chevauche, creerEvenement, plagesIndisponibles, supprimerEvenement } from "@/lib/agenda";
+import { purgerDonneesClient } from "./documents";
+import { figerReponses, questionnaireComplet } from "./questionnaires";
 
 export class ErreurRdv extends Error {}
 
@@ -56,7 +58,7 @@ export type NouvelleDemande = {
   message: string | null; suivi_existant: boolean; deja_avocat: string | null; source: string | null;
 };
 
-export async function creerDemande(d: NouvelleDemande, base: string) {
+export async function creerDemande(d: NouvelleDemande, base: string, reponsesBrutes?: unknown) {
   const db = createAdminClient();
   if (!d.professional_id || !d.client_email || !d.client_nom || !d.creneau_debut) throw new ErreurRdv("Champs manquants");
   if ((d.client_tel ?? "").replace(/\D/g, "").length < 10) throw new ErreurRdv("Merci d'indiquer un numéro de téléphone valide.");
@@ -70,9 +72,20 @@ export async function creerDemande(d: NouvelleDemande, base: string) {
     .some((x) => chevauche(x, { debut: d.creneau_debut, fin: d.creneau_fin }));
   if (!libre) throw new ErreurRdv("Ce créneau vient d'être pris. Merci d'en choisir un autre.");
 
+  // Réponses au questionnaire du domaine du motif, recalculées côté serveur à partir du motif réel.
+  let reponses = null;
+  if (d.motif_id && !d.suivi_existant) {
+    const { data: m } = await db.from("motifs").select("domaine_id, questionnaire_actif").eq("id", d.motif_id).eq("professional_id", d.professional_id).maybeSingle();
+    if (m?.questionnaire_actif !== false && m?.domaine_id) {
+      const brut = reponsesBrutes && typeof reponsesBrutes === "object" ? (reponsesBrutes as Record<string, string>) : {};
+      if (!questionnaireComplet(m.domaine_id, brut)) throw new ErreurRdv("Merci de répondre aux questions obligatoires.");
+      reponses = figerReponses(m.domaine_id, brut);
+    }
+  }
+
   const { data, error } = await db.from("bookings").insert({
     ...d, type_rdv: d.mode, statut: "demandé",
-    message: d.message?.slice(0, 500) ?? null,
+    message: d.message?.slice(0, 500) ?? null, reponses,
   }).select("id").single();
   if (error || !data) throw new ErreurRdv(error?.message ?? "Insertion impossible");
 
@@ -151,7 +164,7 @@ export async function deplacer(r: RdvComplet, debut: unknown, message: string | 
   return n;
 }
 
-/** Suppression par le pro : le rendez-vous sort de ses listes mais reste en base (statistiques).
+/** Suppression (clôture) par le pro : le rendez-vous sort de ses listes et reste en base, anonymisé (statistiques).
  *  Dossier mené à bien → possibilité d'envoyer une demande d'avis Google au client. */
 export async function supprimerParPro(r: RdvComplet, raison: unknown, detail: string | null, demanderAvis: boolean) {
   if (r.statut === "supprimé") throw new ErreurRdv("Ce rendez-vous est déjà supprimé");
@@ -179,8 +192,10 @@ export async function supprimerParPro(r: RdvComplet, raison: unknown, detail: st
   }
   const label = RAISONS_SUPPRESSION.find((x) => x.id === raison)?.label ?? raison;
   await notifierSlack(r.pro.profession, `🗂️ Rendez-vous clôturé : ${label}${avisEnvoye ? " · avis Google demandé" : ""}`, [
-    ["Cabinet", r.pro.cabinet?.nom || nomPro(r)], ["Client", nomClient(r)], ["Précision", detail?.trim() || null],
+    ["Cabinet", r.pro.cabinet?.nom || nomPro(r)], ["Précision", detail?.trim() || null],
   ]);
+  // Clôture : documents déposés, coordonnées du client et e-mails échangés sont effacés.
+  await purgerDonneesClient(r.id);
   return { avisEnvoye };
 }
 
@@ -220,7 +235,7 @@ export async function annulerParClient(r: RdvComplet, base: string, raison: stri
 export async function tachesPlanifiees() {
   const db = createAdminClient();
   const now = Date.now();
-  const res = { relances: 0, annulations: 0, rappels: 0 };
+  const res = { relances: 0, annulations: 0, rappels: 0, purges: 0 };
 
   // Relance à 24 h, annulation automatique à 72 h.
   const { data: attente } = await db.from("bookings").select("id, created_at, relance_envoyee_at").eq("statut", "demandé");
@@ -251,6 +266,14 @@ export async function tachesPlanifiees() {
     await envoyer({ to: r.client_email, type: "rappel_client", rdv: r, ...mails.rappelClient(r, l) });
     await envoyer({ to: r.pro.email, type: "rappel_pro", rdv: r, ...mails.rappelPro(r, l) });
     res.rappels++;
+  }
+
+  // Rendez-vous annulés ou refusés depuis 30 jours : documents, coordonnées du client et e-mails effacés.
+  const { data: anciens } = await db.from("bookings").select("id").in("statut", ["annulé", "refusé"]).is("donnees_client_supprimees_le", null)
+    .lt("updated_at", new Date(now - 30 * H24).toISOString()).limit(50);
+  for (const b of anciens ?? []) {
+    try { await purgerDonneesClient(b.id); res.purges++; }
+    catch (e) { console.error("[cron] purge du rdv", b.id, e instanceof Error ? e.message : e); }
   }
   return res;
 }

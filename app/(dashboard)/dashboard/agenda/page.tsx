@@ -26,7 +26,9 @@ export default async function DashboardAgendaPage({ searchParams }: { searchPara
   const motifs: MotifDraft[] = (rows ?? []).map((r: Record<string, unknown>) => ({
     libelle: (r.libelle as string) ?? "", description: (r.description as string) ?? "", duree_min: (r.duree_min as number) ?? 30,
     modes: (r.modes as MotifDraft["modes"]) ?? ["visio", "telephone"], prix_type: "gratuit", prix_euros: null, actif: (r.actif as boolean) ?? true,
+    domaine_id: (r.domaine_id as string | null) ?? null, questionnaire_actif: (r.questionnaire_actif as boolean | undefined) ?? true,
   }));
+  const { data: domaines } = await db.from("domaines").select("id, label").eq("profession", pro.profession === "comptable" ? "comptable" : "avocat").order("ordre");
 
   const auj = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Paris" });
   const [{ data: dispo }, { data: abs }] = await Promise.all([
@@ -37,7 +39,7 @@ export default async function DashboardAgendaPage({ searchParams }: { searchPara
   return (
     <div>
       <EnTetePage section="Agenda" titre="Agenda & prise de rendez-vous" />
-      <AgendaSettings proId={pro.id} motifsInit={motifs} connected={!!pro.google_calendar_connected} provider={pro.agenda_provider ?? null} retour={agenda ?? null} detail={detail ?? null}
+      <AgendaSettings proId={pro.id} motifsInit={motifs} domaines={domaines ?? []} connected={!!pro.google_calendar_connected} provider={pro.agenda_provider ?? null} retour={agenda ?? null} detail={detail ?? null}
         horairesInit={horairesDepuisRows(dispo)} absencesInit={abs ?? []} ongletInit={(["motifs", "site", "linkedin", "mail", "google"].includes(onglet ?? "") ? onglet : "agenda") as Onglet}
         diffusion={{
           proId: pro.id, slug: pro.slug, base, nom: `${pro.profession === "avocat" ? "Maître " : ""}${pro.prenom} ${pro.nom}`,

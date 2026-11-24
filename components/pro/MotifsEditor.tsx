@@ -1,6 +1,7 @@
 "use client";
 
 import type { MotifDraft } from "@/lib/professions-config";
+import { aUnQuestionnaire, MAX_QUESTIONS, QUESTIONNAIRES } from "@/lib/rdv/questionnaires";
 
 const DUREES = [15, 20, 30, 45, 60, 90];
 const MODES: { id: MotifDraft["modes"][number]; label: string }[] = [
@@ -14,7 +15,9 @@ export const NOUVEAU_MOTIF: MotifDraft = {
   libelle: "", description: "", duree_min: 30, modes: ["visio", "telephone"], prix_type: "gratuit", prix_euros: null, actif: true,
 };
 
-export function MotifsEditor({ motifs, onChange }: { motifs: MotifDraft[]; onChange: (m: MotifDraft[]) => void }) {
+export function MotifsEditor({ motifs, domaines, onChange }: {
+  motifs: MotifDraft[]; domaines: { id: string; label: string }[]; onChange: (m: MotifDraft[]) => void;
+}) {
   const maj = (i: number, patch: Partial<MotifDraft>) => onChange(motifs.map((x, j) => (j === i ? { ...x, ...patch } : x)));
   const deplacer = (i: number, d: -1 | 1) => {
     const j = i + d;
@@ -37,6 +40,19 @@ export function MotifsEditor({ motifs, onChange }: { motifs: MotifDraft[]; onCha
             <button type="button" onClick={() => onChange(motifs.filter((_, j) => j !== i))} className="shrink-0 rounded-full px-3 text-gray-400 hover:text-red-600" aria-label="Supprimer">✕</button>
           </div>
           <input className={`${input} mt-2`} value={m.description} onChange={(e) => maj(i, { description: e.target.value })} placeholder="Précision (facultatif) : sous-sujets traités" />
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <select className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm" value={m.domaine_id ?? ""}
+              onChange={(e) => maj(i, { domaine_id: e.target.value || null })} aria-label="Domaine du motif">
+              <option value="">Domaine : aucun (motif général)</option>
+              {domaines.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
+            </select>
+            {aUnQuestionnaire(m.domaine_id) && (
+              <label className="flex items-center gap-2 text-sm text-gray-600" title={QUESTIONNAIRES[m.domaine_id!].map((q) => `• ${q.label}`).join("\n")}>
+                <input type="checkbox" checked={m.questionnaire_actif ?? true} onChange={(e) => maj(i, { questionnaire_actif: e.target.checked })} />
+                Poser {MAX_QUESTIONS} questions au client
+              </label>
+            )}
+          </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <select className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm" value={m.duree_min} onChange={(e) => maj(i, { duree_min: Number(e.target.value) })}>
               {DUREES.map((d) => <option key={d} value={d}>{d} min</option>)}
