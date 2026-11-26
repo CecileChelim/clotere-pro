@@ -1,16 +1,17 @@
 import "server-only";
+import { enregistrerLead, leadsOuverts, annulerLeadParClient } from "@/lib/leads-serveur";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ics } from "./format";
 import { envoyer, liens, mails } from "./emails";
 import { adresseCabinet, libelleMotif, nomClient, nomPro, rdvParId, type RdvComplet } from "./load";
-import { etatAbonnement } from "@/lib/abonnement";
+import { rdvDirectOuvert } from "@/lib/abonnement";
 import { notifierSlack } from "@/lib/slack";
 import { lienAvisGoogle } from "@/lib/google";
 import { creerDemandeAvis } from "@/lib/avis-serveur";
 import { estRaison, RAISONS_SUPPRESSION } from "./suppression";
 import { chevauche, creerEvenement, plagesIndisponibles, supprimerEvenement } from "@/lib/agenda";
 import { purgerDonneesClient } from "./documents";
-import { figerReponses, questionnaireComplet } from "./questionnaires";
+import { figerReponses, placesQuestions, questionnaireComplet, type Reponse } from "./questionnaires";
 
 export class ErreurRdv extends Error {}
 
@@ -63,36 +64,66 @@ export async function creerDemande(d: NouvelleDemande, base: string, reponsesBru
   if (!d.professional_id || !d.client_email || !d.client_nom || !d.creneau_debut) throw new ErreurRdv("Champs manquants");
   if ((d.client_tel ?? "").replace(/\D/g, "").length < 10) throw new ErreurRdv("Merci d'indiquer un numéro de téléphone valide.");
   if (new Date(d.creneau_debut).getTime() < Date.now()) throw new ErreurRdv("Ce créneau est passé");
-  const { data: pro } = await db.from("professionals").select("id, cabinet:cabinets(trial_ends_at, subscription_status)").eq("id", d.professional_id).maybeSingle();
+  const { data: pro } = await db.from("professionals").select("id, cabinet:cabinets(id, trial_ends_at, subscription_status, leads_actifs, leads_plafond, leads_carte_at, page_seule, offre_widget, site_paye, offre_rdv)").eq("id", d.professional_id).maybeSingle();
   if (!pro) throw new ErreurRdv("Professionnel introuvable");
   const cab = Array.isArray(pro.cabinet) ? pro.cabinet[0] : pro.cabinet;
-  if (!etatAbonnement(cab as { trial_ends_at: string; subscription_status: string } | null).actif) throw new ErreurRdv("La prise de rendez-vous en ligne de ce cabinet est momentanément indisponible.");
+  // Demande venue de la fiche clotere.fr : soumise à l'activation des leads (et au plafond), pas à l'abonnement.
+  const viaClotere = d.source === "clotere";
+  if (viaClotere) {
+    if (!cab || !(await leadsOuverts(cab as { id: string; leads_actifs: boolean; leads_plafond: number | null }))) {
+      throw new ErreurRdv("Ce cabinet ne prend plus de nouvelles demandes en ligne pour le moment. Contactez-le directement par téléphone.");
+    }
+  } else if (!rdvDirectOuvert(cab)) {
+    throw new ErreurRdv("La prise de rendez-vous en ligne de ce cabinet est momentanément indisponible.");
+  }
 
   const libre = !(await plagesIndisponibles(d.professional_id, new Date(d.creneau_debut), new Date(d.creneau_fin)))
     .some((x) => chevauche(x, { debut: d.creneau_debut, fin: d.creneau_fin }));
   if (!libre) throw new ErreurRdv("Ce créneau vient d'être pris. Merci d'en choisir un autre.");
 
   // Réponses au questionnaire du domaine du motif, recalculées côté serveur à partir du motif réel.
-  let reponses = null;
+  // Le sujet (sous-domaine choisi parmi ceux cochés sur le motif) passe en tête des réponses et est gardé sur le rdv.
+  let reponses: Reponse[] | null = null;
+  let specialite_id: string | null = null;
   if (d.motif_id && !d.suivi_existant) {
-    const { data: m } = await db.from("motifs").select("domaine_id, questionnaire_actif").eq("id", d.motif_id).eq("professional_id", d.professional_id).maybeSingle();
-    if (m?.questionnaire_actif !== false && m?.domaine_id) {
-      const brut = reponsesBrutes && typeof reponsesBrutes === "object" ? (reponsesBrutes as Record<string, string>) : {};
-      if (!questionnaireComplet(m.domaine_id, brut)) throw new ErreurRdv("Merci de répondre aux questions obligatoires.");
-      reponses = figerReponses(m.domaine_id, brut);
+    const { data: m } = await db.from("motifs").select("domaine_id, questionnaire_actif, specialite_ids").eq("id", d.motif_id).eq("professional_id", d.professional_id).maybeSingle();
+    const brut = reponsesBrutes && typeof reponsesBrutes === "object" ? { ...(reponsesBrutes as Record<string, string>) } : {};
+    const sujetsMotif: string[] = m?.specialite_ids ?? [];
+    const demanderSujet = sujetsMotif.length > 1;
+    if (sujetsMotif.length === 1) brut.sujet = sujetsMotif[0];
+    else if (!demanderSujet || (brut.sujet !== "autre" && !sujetsMotif.includes(brut.sujet))) delete brut.sujet;
+    if (demanderSujet && !brut.sujet) throw new ErreurRdv("Merci de préciser l'objet de votre demande.");
+    let sujet: Reponse | null = null;
+    if (brut.sujet === "autre") sujet = { question: "Sujet", reponse: "Autre" };
+    else if (brut.sujet) {
+      const { data: s } = await db.from("specialites").select("id, label").eq("id", brut.sujet).maybeSingle();
+      if (s) { specialite_id = s.id; sujet = { question: "Sujet", reponse: s.label }; }
     }
+    let questions: Reponse[] | null = null;
+    if (m?.domaine_id) {
+      const places = placesQuestions({ sujet: demanderSujet, deja: true });
+      if (!questionnaireComplet(m.domaine_id, brut, places)) throw new ErreurRdv("Merci de répondre aux questions obligatoires.");
+      questions = figerReponses(m.domaine_id, brut, places);
+    }
+    reponses = sujet || questions ? [...(sujet ? [sujet] : []), ...(questions ?? [])] : null;
   }
 
   const { data, error } = await db.from("bookings").insert({
     ...d, type_rdv: d.mode, statut: "demandé",
-    message: d.message?.slice(0, 500) ?? null, reponses,
+    message: d.message?.slice(0, 500) ?? null, reponses, specialite_id,
   }).select("id").single();
   if (error || !data) throw new ErreurRdv(error?.message ?? "Insertion impossible");
 
   const r = (await rdvParId(data.id))!;
+  const lead = viaClotere ? await enregistrerLead({ ...r, professional_id: d.professional_id, motif_libelle: libelleMotif(r) }) : null;
   const l = liens(r, base);
   await envoyer({ to: r.client_email, type: "demande_client", rdv: r, ...mails.demandeClient(r, l) });
-  await envoyer({ to: r.pro.email, type: "demande_pro", rdv: r, ...mails.demandePro(r, l) });
+  // Apport d'affaires sans carte enregistrée (formule page) : la demande est annoncée sans les coordonnées du client,
+  // le pro ajoute sa carte pour la consulter.
+  const sansCarte = viaClotere && !(cab as { leads_carte_at?: string | null } | null)?.leads_carte_at;
+  await envoyer({ to: r.pro.email, type: "demande_pro", rdv: r, ...(sansCarte
+    ? mails.demandeProSansCarte(r, `${base}/dashboard/abonnement`)
+    : mails.demandePro(r, l, lead ? { ...lead, lien: `${base}/dashboard/leads` } : null)) });
   await notifierSlack(r.pro.profession, `📅 Nouvelle demande de rendez-vous : ${r.pro.cabinet?.nom || nomPro(r)}`, [
     ["Motif", libelleMotif(r)],
     ["Créneau", new Date(r.creneau_debut).toLocaleString("fr-FR", { timeZone: "Europe/Paris", dateStyle: "medium", timeStyle: "short" })],
@@ -226,6 +257,7 @@ export async function annulerParClient(r: RdvComplet, base: string, raison: stri
   if (!peutAnnulerClient(r)) throw new ErreurRdv("Annulation en ligne impossible moins de 24 h avant : contactez le cabinet");
   if (!RAISONS_ANNULATION[raison]) throw new ErreurRdv("Indiquez la raison de l'annulation");
   const n = await maj(r.id, { statut: "annulé", annule_par: "client", annulation_raison: raison });
+  await annulerLeadParClient(r.id); // demande venue de clotere.fr annulée par le client : non facturée
   if (r.agenda_event_id) await supprimerEvenement(r.pro.id, r.agenda_event_id);
   await envoyer({ to: n.pro.email, type: "annule_pro", rdv: n, ...mails.annulePro(n, liens(n, base)) });
   return n;

@@ -92,3 +92,45 @@ export function SitePresentation({ profession, clientRdv }: { profession: "avoca
     </div>
   );
 }
+
+/** Formule page : le widget de prise de rendez-vous (site, fiche Google, LinkedIn, signature e-mail) est l'offre à 69 € HT / mois. */
+export function WidgetPresentation() {
+  const [etat, setEtat] = useState<"" | "envoi">("");
+  const [msg, setMsg] = useState("");
+  return (
+    <div className="card overflow-hidden">
+      <div className="bg-brand-gradient p-8 sm:p-10">
+        <p className="eyebrow text-gray-950/60">Widget de prise de rendez-vous · à activer</p>
+        <h2 className="mt-3 max-w-2xl text-3xl font-medium tracking-tight text-gray-950 sm:text-4xl">Recevez des rendez-vous qualifiés partout où l&apos;on vous cherche</h2>
+        <p className="mt-3 max-w-xl text-[15px] text-gray-800">Le même module que sur votre page Clotere, sur vos propres canaux : vos clients réservent 24h/24, chaque demande arrive qualifiée dans votre agenda.</p>
+      </div>
+      <div className="grid gap-8 p-8 sm:p-10 lg:grid-cols-[1fr_320px]">
+        <ul className="space-y-3 text-[15px] text-gray-700">
+          {["Bouton « Prendre rendez-vous » sur votre site internet",
+            "Lien de réservation sur votre fiche Google et votre profil LinkedIn",
+            "Lien dans votre signature e-mail",
+            "Motifs et questions pour qualifier chaque demande",
+            "Synchronisation Google Agenda et Outlook, rappels automatiques",
+            "Rendez-vous de vos canaux inclus : aucun paiement au rendez-vous"].map((t) => <li key={t} className="flex gap-3"><Coche />{t}</li>)}
+        </ul>
+        <div className="rounded-2xl bg-gray-50 p-6 ring-1 ring-black/5">
+          <p className="text-sm text-gray-500">Widget de prise de rendez-vous</p>
+          <p className="mt-1 text-3xl font-medium text-gray-950">{PRIX.widget} € <span className="text-sm font-normal text-gray-500">HT / mois</span></p>
+          <p className="mt-1 text-sm text-gray-500">par professionnel · sans engagement</p>
+          <button type="button" disabled={etat === "envoi"} className="btn-solid mt-5 w-full disabled:opacity-50"
+            onClick={async () => {
+              setEtat("envoi"); setMsg("");
+              const r = await fetch("/api/options/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ option: "widget" }) }).catch(() => null);
+              const j = (await r?.json().catch(() => null)) as { url?: string; error?: string } | null;
+              if (j?.url) { window.location.href = j.url; return; }
+              setEtat(""); setMsg(j?.error ?? "Une erreur est survenue, réessayez.");
+            }}>
+            {etat === "envoi" ? "Redirection…" : "Activer le widget"}
+          </button>
+          {msg && <p className="mt-2 text-sm text-red-600">{msg}</p>}
+          <p className="mt-3 text-xs text-gray-500">Cumulable avec votre page Clotere et l&apos;apport d&apos;affaires.</p>
+        </div>
+      </div>
+    </div>
+  );
+}

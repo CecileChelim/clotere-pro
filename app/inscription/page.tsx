@@ -37,6 +37,7 @@ export default async function InscriptionPage() {
       userEmail={user.email ?? ""}
       initialStep={(pro ? (["presence", "expertise", "motifs"].includes(pro.onboarding_step) ? pro.onboarding_step : "presence") : "vous") as Etape}
       proId={pro?.id ?? null}
+      pageSeule={user.user_metadata?.formule === "page"}
       cabinetId={pro?.cabinet_id ?? null}
     />
   );

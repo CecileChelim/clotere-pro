@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bars3Icon, ChevronDownIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { CTA_SITE, LOGIN, type LandingConfig, type MenuEntry } from "@/lib/landing-config";
+import { LOGIN, type LandingConfig, type MenuEntry } from "@/lib/landing-config";
 import { btnMd, btnPrimary, btnSecondary } from "./styles";
 
 type MenuKey = "produits" | "solutions";
@@ -125,8 +125,8 @@ export default function SiteNav({ conf, espace }: { conf: LandingConfig; espace?
           )}
         </div>
         <div className="hidden min-[480px]:block">
-          <Link href={CTA_SITE.href} className={primary} data-cta="header">
-            {CTA_SITE.label}
+          <Link href={conf.ctaPage.href} className={primary} data-cta="header">
+            {conf.ctaPage.label}
           </Link>
         </div>
         <button type="button" onClick={() => setMobileOpen(true)} className="-mr-1 rounded-full p-2 text-nuit hover:bg-white/60 lg:hidden" aria-expanded={mobileOpen}>
@@ -144,7 +144,7 @@ export default function SiteNav({ conf, espace }: { conf: LandingConfig; espace?
           className={`absolute inset-x-0 top-[calc(100%+24px)] z-50 hidden justify-center gap-6 rounded-[20px] border border-black/[0.06] bg-white px-12 py-10 text-center drop-shadow-[0px_24px_24px_rgba(20,18,51,0.14)] ${open === m.key ? "lg:flex" : ""}`}
         >
           {m.entries.map((e) => (
-            <Link key={e.href} href={e.href} onClick={close} className="flex w-[300px] flex-col items-center gap-[10px] rounded-2xl p-5 transition-colors hover:bg-brand-section">
+            <Link key={e.href} href={e.href} onClick={close} className="flex w-[260px] flex-col items-center gap-[10px] rounded-2xl p-5 transition-colors hover:bg-brand-section">
               <span className="w-full font-manrope text-[22px] font-semibold leading-normal tracking-[-0.44px] text-nuit">{e.label}</span>
               <span className="w-full text-[15px] leading-[1.45] text-[#6b6b7a]">{e.description}</span>
             </Link>
@@ -202,8 +202,8 @@ export default function SiteNav({ conf, espace }: { conf: LandingConfig; espace?
               ))}
             </ul>
             <div className="flex flex-col gap-3 border-t border-black/10 pt-6">
-              <Link href={CTA_SITE.href} className={primary} data-cta="header">
-                {CTA_SITE.label}
+              <Link href={conf.ctaPage.href} className={primary} data-cta="header">
+                {conf.ctaPage.label}
               </Link>
               {espace ? (
                 <Link href="/dashboard" className={secondary}>

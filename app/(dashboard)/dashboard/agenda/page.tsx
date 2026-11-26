@@ -6,6 +6,7 @@ import { EnTetePage } from "@/components/dashboard/EnTetePage";
 import type { MotifDraft } from "@/lib/professions-config";
 import { horairesDepuisRows } from "@/lib/horaires";
 import { RdvPresentation } from "@/components/mon-site/Upsells";
+import { chargerTaxonomie } from "@/lib/taxonomie";
 
 export default async function DashboardAgendaPage({ searchParams }: { searchParams: Promise<{ agenda?: string; detail?: string; onglet?: string }> }) {
   const { agenda, detail, onglet } = await searchParams;
@@ -15,10 +16,13 @@ export default async function DashboardAgendaPage({ searchParams }: { searchPara
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase as any;
-  const { data: pro } = await db.from("professionals").select("id, slug, prenom, nom, email, telephone, profession, google_calendar_connected, agenda_provider, cabinet:cabinets(offre_rdv, nom, telephone)").eq("auth_user_id", user.id).maybeSingle();
+  const { data: pro } = await db.from("professionals").select("id, slug, prenom, nom, email, telephone, profession, google_calendar_connected, agenda_provider, cabinet:cabinets(offre_rdv, nom, telephone, page_seule, subscription_status, offre_widget)").eq("auth_user_id", user.id).maybeSingle();
   if (!pro) redirect("/inscription");
   const cab = Array.isArray(pro.cabinet) ? pro.cabinet[0] : pro.cabinet;
-  if (cab?.offre_rdv === false) return <RdvPresentation page="agenda" />;
+  // Formule page : l'agenda sert à la page Clotere, même sans widget ni rdv sur le site.
+  if (cab?.offre_rdv === false && !cab?.page_seule) return <RdvPresentation page="agenda" />;
+  // Formule page sans widget : les onglets d'installation renvoient vers « Widget rdv ».
+  if (cab?.page_seule && !cab?.offre_widget && ["site", "linkedin", "mail", "google"].includes(onglet ?? "")) redirect("/dashboard/widget");
   const host = (await headers()).get("host") ?? "avocat.clotere.fr";
   const base = `${host.includes("localhost") ? "http" : "https"}://${host}`;
 
@@ -27,8 +31,13 @@ export default async function DashboardAgendaPage({ searchParams }: { searchPara
     libelle: (r.libelle as string) ?? "", description: (r.description as string) ?? "", duree_min: (r.duree_min as number) ?? 30,
     modes: (r.modes as MotifDraft["modes"]) ?? ["visio", "telephone"], prix_type: "gratuit", prix_euros: null, actif: (r.actif as boolean) ?? true,
     domaine_id: (r.domaine_id as string | null) ?? null, questionnaire_actif: (r.questionnaire_actif as boolean | undefined) ?? true,
+    specialite_ids: (r.specialite_ids as string[] | null) ?? [],
   }));
-  const { data: domaines } = await db.from("domaines").select("id, label").eq("profession", pro.profession === "comptable" ? "comptable" : "avocat").order("ordre");
+  const [domaines, { data: ps }] = await Promise.all([
+    chargerTaxonomie(db, pro.profession === "comptable" ? "comptable" : "avocat"),
+    db.from("pro_specialites").select("specialite_id").eq("professional_id", pro.id),
+  ]);
+  const specsPro = (ps ?? []).map((x: { specialite_id: string }) => x.specialite_id);
 
   const auj = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Paris" });
   const [{ data: dispo }, { data: abs }] = await Promise.all([
@@ -39,8 +48,8 @@ export default async function DashboardAgendaPage({ searchParams }: { searchPara
   return (
     <div>
       <EnTetePage section="Agenda" titre="Agenda & prise de rendez-vous" />
-      <AgendaSettings proId={pro.id} motifsInit={motifs} domaines={domaines ?? []} connected={!!pro.google_calendar_connected} provider={pro.agenda_provider ?? null} retour={agenda ?? null} detail={detail ?? null}
-        horairesInit={horairesDepuisRows(dispo)} absencesInit={abs ?? []} ongletInit={(["motifs", "site", "linkedin", "mail", "google"].includes(onglet ?? "") ? onglet : "agenda") as Onglet}
+      <AgendaSettings proId={pro.id} motifsInit={motifs} domaines={domaines} specsPro={specsPro} connected={!!pro.google_calendar_connected} provider={pro.agenda_provider ?? null} retour={agenda ?? null} detail={detail ?? null}
+        widgetVerrouille={!!cab?.page_seule && !cab?.offre_widget} horairesInit={horairesDepuisRows(dispo)} absencesInit={abs ?? []} ongletInit={(["motifs", "site", "linkedin", "mail", "google"].includes(onglet ?? "") ? onglet : "agenda") as Onglet}
         diffusion={{
           proId: pro.id, slug: pro.slug, base, nom: `${pro.profession === "avocat" ? "Maître " : ""}${pro.prenom} ${pro.nom}`,
           office: cab?.nom || `Cabinet ${pro.nom}`, cabinetNom: cab?.nom ?? null, telephone: cab?.telephone || pro.telephone,

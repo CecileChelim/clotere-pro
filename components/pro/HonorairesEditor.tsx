@@ -20,13 +20,19 @@ function Chips({ items, value, onChange }: { items: { id: string; label: string 
   );
 }
 
-export function HonorairesEditor({ value, onChange }: { value: HonorairesValue; onChange: (v: HonorairesValue) => void }) {
+export function HonorairesEditor({ value, onChange, profession = "avocat" }: { value: HonorairesValue; onChange: (v: HonorairesValue) => void; profession?: "avocat" | "comptable" }) {
+  // Expert-comptable : pas de convention d'honoraires ni d'honoraire de résultat, ni de services propres aux avocats.
+  const comptable = profession === "comptable";
+  const modes = comptable ? HONORAIRES_MODES.filter((m) => ["forfait", "horaire"].includes(m.id)) : HONORAIRES_MODES;
+  const services = comptable ? SERVICES.filter((s) => s.id === "paiement_plusieurs_fois") : SERVICES;
   return (
     <div className="space-y-6">
       <div>
         <p className="mb-2 text-sm font-medium text-gray-950">Mode de facturation</p>
-        <Chips items={HONORAIRES_MODES} value={value.honoraires_modes} onChange={(v) => onChange({ ...value, honoraires_modes: v })} />
-        <p className="mt-2 text-xs text-gray-500">Affiché avec la mention : « Une convention d&apos;honoraires détaillée sera établie selon votre dossier. »</p>
+        <Chips items={modes} value={value.honoraires_modes} onChange={(v) => onChange({ ...value, honoraires_modes: v })} />
+        <p className="mt-2 text-xs text-gray-500">{comptable
+          ? "Affiché avec la mention : « Une lettre de mission détaillée sera établie selon vos besoins. »"
+          : <>Affiché avec la mention : « Une convention d&apos;honoraires détaillée sera établie selon votre dossier. »</>}</p>
       </div>
       <div>
         <p className="mb-2 text-sm font-medium text-gray-950">Moyens de paiement</p>
@@ -34,7 +40,7 @@ export function HonorairesEditor({ value, onChange }: { value: HonorairesValue; 
       </div>
       <div>
         <p className="mb-2 text-sm font-medium text-gray-950">Services proposés</p>
-        <Chips items={SERVICES} value={value.services} onChange={(v) => onChange({ ...value, services: v })} />
+        <Chips items={services} value={value.services} onChange={(v) => onChange({ ...value, services: v })} />
       </div>
     </div>
   );

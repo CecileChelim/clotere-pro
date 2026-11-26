@@ -414,3 +414,72 @@ export function ApercuReponseIA({ p = "avocat" }: P) {
     </Apercu>
   );
 }
+
+/* ── Page Clotere (apport d'affaires) ──────────────────────────────────────── */
+
+export function ApercuPageClotere({ p = "avocat" }: P) {
+  const ex = EXEMPLES[p];
+  const domaines = ex.cartesSite;
+  return (
+    <Apercu>
+      <p className={`text-[11px] ${muted}`}>clotere.fr › {p === "avocat" ? "Avocats" : "Experts-comptables"} › {ex.ville}</p>
+      <div className="flex items-center gap-3">
+        <Avatar initials={ex.initiales} size={48} square />
+        <div className="flex min-w-0 flex-col gap-[3px]">
+          <p className="text-[15px] font-semibold">{ex.cabinet}</p>
+          <p className={`text-[12px] ${muted}`}>{p === "avocat" ? "Avocat" : "Expert-comptable"} · {ex.ville}</p>
+        </div>
+        <Spacer />
+        <Pill tone="green">Prend des rdv</Pill>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {domaines.map((d) => (
+          <Pill key={d} tone="grey">{d}</Pill>
+        ))}
+      </div>
+      <div className={`flex w-full flex-col gap-2 rounded-xl ${line} p-3 text-[12px]`}>
+        <p className="font-semibold">Prochaines disponibilités</p>
+        <div className="flex gap-1.5">
+          {["Lun. 10:00", "Lun. 14:30", "Mar. 09:00"].map((c, i) => (
+            <span key={c} className={`flex-1 rounded-lg py-2 text-center font-semibold ${i === 0 ? "bg-brand text-white" : "bg-brand-soft text-brand"}`}>{c}</span>
+          ))}
+        </div>
+      </div>
+      <span className="flex justify-center rounded-[10px] bg-brand py-[10px] text-[13px] font-semibold text-white">Prendre rendez-vous</span>
+    </Apercu>
+  );
+}
+
+/* ── Rendez-vous apportés (suivi, sans montant) ─────────────────────────────── */
+
+export function ApercuRdvApportes({ p = "avocat" }: P) {
+  const ex = EXEMPLES[p];
+  const rows: [string, string, string, "green" | "soft" | "grey"][] = [
+    ["JM", "Julie M.", ex.demande.motif, "green"],
+    ["TB", "Thomas B.", "Première consultation", "soft"],
+    ["NR", "Nadia R.", "Demande hors domaine", "grey"],
+  ];
+  const statut = { green: "Rendez-vous honoré", soft: "À venir · lundi", grey: "Contesté · non facturé" };
+  return (
+    <Apercu>
+      <div className="flex items-center justify-between">
+        <p className="text-[14px] font-semibold">Rendez-vous apportés par Clotere</p>
+        <Pill tone="soft">Ce mois-ci · 3</Pill>
+      </div>
+      <div className={`flex w-full flex-col rounded-xl ${line} text-[12px]`}>
+        {rows.map(([ini, nom, motif, tone]) => (
+          <div key={nom} className="flex items-center gap-[10px] px-3 py-[10px]">
+            <Avatar initials={ini} size={28} />
+            <div className="flex min-w-0 flex-col">
+              <span className="font-semibold">{nom}</span>
+              <span className={`truncate ${muted}`}>{motif}</span>
+            </div>
+            <Spacer />
+            <Pill tone={tone}>{statut[tone]}</Pill>
+          </div>
+        ))}
+      </div>
+      <p className={`text-[12px] ${muted}`}>Contestable en un clic jusqu’à 48 h après le rendez-vous.</p>
+    </Apercu>
+  );
+}

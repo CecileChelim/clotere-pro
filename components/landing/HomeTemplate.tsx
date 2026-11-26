@@ -30,7 +30,7 @@ export default function HomeTemplate({ data, espace }: { data: HomeData; espace?
         espace={espace}
         {...data.hero}
         cartes={
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:gap-6">
+          <div className={`grid grid-cols-1 gap-4 lg:gap-6 ${data.cartes.length > 3 ? "md:grid-cols-2 xl:grid-cols-4" : "md:grid-cols-3"}`}>
             {data.cartes.map((c) => (
               <Carte key={c.title} c={c} level="h2" />
             ))}

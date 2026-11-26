@@ -5,7 +5,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import { AvatarUploader } from "@/components/onboarding/AvatarUploader";
 import { AdresseAutocomplete } from "./AdresseAutocomplete";
 import { selectionParDomaine, type Domaine } from "@/lib/taxonomie";
-import { SpecialitesPicker } from "./SpecialitesPicker";
+import { ExpertisePicker } from "./DomainesSujets";
 import { HonorairesEditor } from "./HonorairesEditor";
 import { avecPrefixe, LINKEDIN_PREFIX, LINKEDIN_STRIP, PrefixInput } from "./PrefixInput";
 
@@ -14,17 +14,17 @@ const label = "mb-1.5 block text-sm font-medium text-gray-950";
 
 type Cabinet = {
   id: string; nom: string; adresse: string | null; code_postal: string | null; ville: string | null; telephone: string | null;
-  site_web: string | null; google_rating: number | null; google_reviews_count: number | null; google_reviews_url: string | null; google_business_url?: string | null;
+  barreau?: string | null; site_web: string | null; google_rating: number | null; google_reviews_count: number | null; google_reviews_url: string | null; google_business_url?: string | null;
 };
-type Pro = { linkedin_url?: string | null; profession?: string; domaines?: string[] | null; honoraires_modes?: string[] | null; paiement_moyens?: string[] | null; services?: string[] | null; role?: string; id: string; auth_user_id: string; prenom: string; nom: string; telephone: string | null; email: string; photo_url: string | null; bio: string | null };
+type Pro = { accepte_nouveaux_clients?: boolean | null; linkedin_url?: string | null; profession?: string; domaines?: string[] | null; honoraires_modes?: string[] | null; paiement_moyens?: string[] | null; services?: string[] | null; role?: string; id: string; auth_user_id: string; prenom: string; nom: string; telephone: string | null; email: string; photo_url: string | null; bio: string | null };
 
 export function ProfilForm({ pro, cabinet, taxo, specsInit }: { pro: Pro; cabinet: Cabinet | null; taxo: Domaine[]; specsInit: string[] }) {
   const supabase = useMemo(() => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!), []);
-  const [f, setF] = useState({ prenom: pro.prenom, nom: pro.nom, telephone: pro.telephone ?? "", bio: pro.bio ?? "", linkedin_url: pro.linkedin_url ?? "" });
+  const [f, setF] = useState({ prenom: pro.prenom, nom: pro.nom, telephone: pro.telephone ?? "", bio: pro.bio ?? "", linkedin_url: pro.linkedin_url ?? "", accepte_nouveaux_clients: pro.accepte_nouveaux_clients !== false });
   const [photo, setPhoto] = useState<string | null>(pro.photo_url);
   const [cab, setCab] = useState({
     nom: cabinet?.nom ?? "", adresse: cabinet?.adresse ?? "", code_postal: cabinet?.code_postal ?? "", ville: cabinet?.ville ?? "",
-    telephone: cabinet?.telephone ?? "", site_web: cabinet?.site_web ?? "", google_reviews_url: cabinet?.google_business_url ?? cabinet?.google_reviews_url ?? "",
+    telephone: cabinet?.telephone ?? "", barreau: cabinet?.barreau ?? "", site_web: cabinet?.site_web ?? "", google_reviews_url: cabinet?.google_business_url ?? cabinet?.google_reviews_url ?? "",
   });
   const titulaire = pro.role !== "membre";
   const [specs, setSpecs] = useState<string[]>(specsInit);
@@ -32,7 +32,7 @@ export function ProfilForm({ pro, cabinet, taxo, specsInit }: { pro: Pro; cabine
     honoraires_modes: pro.honoraires_modes ?? [], paiement_moyens: pro.paiement_moyens ?? [], services: pro.services ?? [],
   });
   const TABS = [
-    ["profil", "Profil"], ...(cabinet ? [["cabinet", "Cabinet"]] : []), ["expertise", "Expertise"], ...(pro.profession === "comptable" ? [] : [["honoraires", "Honoraires"]]),
+    ["profil", "Profil"], ...(cabinet ? [["cabinet", "Cabinet"]] : []), ["expertise", "Expertise"], ["honoraires", "Honoraires"],
   ] as [string, string][];
   const [tab, setTab] = useState("profil");
   // Les onglets masqués restent montés : rien n'est perdu en passant de l'un à l'autre, tout s'enregistre d'un coup.
@@ -49,7 +49,7 @@ export function ProfilForm({ pro, cabinet, taxo, specsInit }: { pro: Pro; cabine
     if (cabinet && titulaire) {
       const site = cab.site_web ? avecPrefixe("https://", cab.site_web.replace(/^https?:\/\//, "")) : null;
       const fiche = cab.google_reviews_url ? avecPrefixe("https://", cab.google_reviews_url.replace(/^https?:\/\//, "")) : null;
-      ({ error: e4 } = await supabase.from("cabinets").update({ ...cab, site_web: site || null, google_reviews_url: fiche, google_business_url: fiche }).eq("id", cabinet.id));
+      ({ error: e4 } = await supabase.from("cabinets").update({ ...cab, barreau: pro.profession === "avocat" ? cab.barreau.trim() || null : null, site_web: site || null, google_reviews_url: fiche, google_business_url: fiche }).eq("id", cabinet.id));
     }
     await supabase.from("professionals").update({ ville: cab.ville, cabinet: cab.nom }).eq("id", pro.id);
     setStatus(e1 || e4 ? "error" : "saved");
@@ -92,6 +92,9 @@ export function ProfilForm({ pro, cabinet, taxo, specsInit }: { pro: Pro; cabine
                   google_reviews_url: c.google_reviews_url || (l.google_url ?? "") }))} /></div>
             <div className="sm:col-span-2"><label className={label}>Code postal</label><input className={input} value={cab.code_postal} onChange={(e) => setCab({ ...cab, code_postal: e.target.value })} /></div>
             <div className="sm:col-span-4"><label className={label}>Ville</label><input className={input} value={cab.ville} onChange={(e) => setCab({ ...cab, ville: e.target.value })} /></div>
+            {pro.profession === "avocat" && (
+              <div className="sm:col-span-6"><label className={label}>Barreau</label><input className={input} value={cab.barreau} onChange={(e) => setCab({ ...cab, barreau: e.target.value })} placeholder="Paris, Hauts-de-Seine…" /></div>
+            )}
             <div className="sm:col-span-3"><label className={label}>Téléphone du cabinet</label><input className={input} value={cab.telephone} onChange={(e) => setCab({ ...cab, telephone: e.target.value })} /></div>
             <div className="sm:col-span-3"><label className={label}>Site internet</label><PrefixInput prefix="https://" value={cab.site_web} onChange={(v) => setCab({ ...cab, site_web: v })} placeholder="www.votre-cabinet.fr" /></div>
             <div className="sm:col-span-6"><label className={label}>Lien de votre fiche Google</label><PrefixInput prefix="https://" value={cab.google_reviews_url} onChange={(v) => setCab({ ...cab, google_reviews_url: v })} placeholder="share.google/… ou maps.app.goo.gl/…" /></div>
@@ -106,14 +109,22 @@ export function ProfilForm({ pro, cabinet, taxo, specsInit }: { pro: Pro; cabine
       )}
 
       <section className={sec("expertise")}>
-        <p className="eyebrow">Domaines &amp; spécialités</p>
-        <p className="text-sm text-gray-600">Ouvrez chaque domaine et cochez vos spécialités : elles s&apos;affichent sur votre page de prise de rendez-vous.</p>
-        <SpecialitesPicker taxo={taxo} value={specs} onChange={setSpecs} />
+        <p className="eyebrow">Domaines de compétence &amp; motifs de rendez-vous</p>
+        <p className="text-sm text-gray-600">Choisissez vos domaines de compétence, puis vos motifs de rendez-vous dans chacun : ils s&apos;affichent sur votre page de prise de rendez-vous.</p>
+        <ExpertisePicker taxo={taxo} value={specs} onChange={setSpecs} />
       </section>
 
       <section className={sec("honoraires")}>
         <p className="eyebrow">Honoraires</p>
-        <HonorairesEditor value={hono} onChange={setHono} />
+        <HonorairesEditor value={hono} onChange={setHono} profession={pro.profession === "comptable" ? "comptable" : "avocat"} />
+      </section>
+
+      <section className={sec("profil")}>
+        <p className="eyebrow">Nouveaux clients</p>
+        <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-gray-50 p-4 text-sm ring-1 ring-black/5">
+          <input type="checkbox" className="mt-0.5 accent-gray-950" checked={f.accepte_nouveaux_clients} onChange={(e) => setF({ ...f, accepte_nouveaux_clients: e.target.checked })} />
+          <span><span className="font-medium text-gray-950">J&apos;accepte de nouveaux clients</span><span className="block text-gray-500">Décoché : votre page reste visible, mais la réservation en ligne est fermée aux nouveaux clients.</span></span>
+        </label>
       </section>
 
       <section className={sec("profil")}>

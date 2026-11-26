@@ -42,7 +42,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { count: messagesNonLus } = cab?.offre_site ? await (supabase as any).from("site_messages").select("id", { count: "exact", head: true }).eq("cabinet_id", cab.id).eq("lu", false) : { count: 0 };
-  const modules = { site: !!cab?.offre_site, rdv: cab?.offre_rdv !== false, visibilite: !!cab?.offre_visibilite, avis, ads: !!cab?.offre_ads };
+  // Page seule (apport d'affaires sans abonnement) : jamais bloquée, l'apport d'affaires est son module principal.
+  const pageSeule = !!cab?.page_seule;
+  // Widget de prise de rdv (69 € HT / mois) payé par un compte formule page.
+  const widgetActif = pageSeule && !!cab?.offre_widget;
+  const modules = { site: !!cab?.offre_site, rdv: cab?.offre_rdv !== false || pageSeule, leads: !!cab?.leads_actives_at, visibilite: !!cab?.offre_visibilite, avis, ads: !!cab?.offre_ads };
   const enPause = modules.site && !modules.rdv ? "votre site sera mis en pause" : modules.site ? "votre site et votre page de rendez-vous seront mis en pause" : "votre page de rendez-vous sera mise en pause";
 
   const brand = PROFESSIONS[professional?.profession === "comptable" ? "comptable" : "avocat"].brand;
@@ -69,14 +73,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
         <div className="mb-10 flex flex-col gap-6 rounded-[2rem] bg-white p-5 shadow-xl ring-1 ring-black/5 sm:p-8 lg:flex-row lg:gap-10">
           <aside className="shrink-0 lg:w-48">
-            <DashboardNav modules={modules} avisARepondre={avisARepondre ?? 0} messagesNonLus={messagesNonLus ?? 0} />
+            <DashboardNav pageSeule={pageSeule} widgetActif={widgetActif} modules={modules} avisARepondre={avisARepondre ?? 0} messagesNonLus={messagesNonLus ?? 0} />
             <div className="mt-6 hidden lg:block"><MarketingPromoCard compact profession={professional?.profession} /></div>
             <div className="mt-6 border-t border-gray-100 pt-4">
               <SignOutButton />
             </div>
           </aside>
           <main className="min-w-0 flex-1">
-            {abo.essai && cab?.subscription_status !== "actif" && (
+            {abo.essai && !pageSeule && cab?.subscription_status !== "actif" && (
               <div className={`mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm ring-1 ${abo.joursRestants <= 2 ? "bg-amber-50 ring-amber-200" : "bg-gray-50 ring-black/5"}`}>
                 <span className="text-gray-700">Essai gratuit : <strong className="text-gray-950">{abo.joursRestants} jour{abo.joursRestants > 1 ? "s" : ""} restant{abo.joursRestants > 1 ? "s" : ""}</strong>{abo.joursRestants <= 2 && ` · ensuite, ${enPause}`}</span>
                 <Link href="/dashboard/abonnement" className="font-medium text-gray-950 underline underline-offset-2">Ajouter ma carte</Link>
@@ -88,7 +92,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
                 <Link href="/dashboard/abonnement" className="font-semibold underline underline-offset-2">Mettre à jour</Link>
               </div>
             )}
-            <GardeAbonnement bloque={!abo.actif} paywall={
+            <GardeAbonnement bloque={!abo.actif && !pageSeule} paywall={
               <div className="card p-10 text-center">
                 <p className="eyebrow">Essai terminé</p>
                 <h2 className="mx-auto mt-3 max-w-lg text-3xl font-medium tracking-tight text-gray-950">Votre essai gratuit est terminé</h2>

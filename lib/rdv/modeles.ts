@@ -14,6 +14,14 @@ const PIECES: Record<string, string[]> = {
   routier: ["l'avis de contravention ou la convocation", "votre relevé d'information intégral (solde de points)", "le constat amiable et les échanges avec votre assurance, en cas d'accident"],
   etrangers: ["votre passeport et votre titre de séjour (ou récépissé)", "les décisions ou courriers de la préfecture (refus, OQTF…)", "les justificatifs de présence en France et de situation familiale"],
   entreprises: ["l'extrait Kbis et les statuts de la société", "les contrats, factures ou échanges liés au litige", "les derniers comptes annuels, si pertinent"],
+  societes: ["l'extrait Kbis et les statuts de la société", "le pacte d'associés, le cas échéant", "les procès-verbaux d'assemblée et derniers comptes annuels utiles"],
+  commercial: ["le contrat, les conditions générales ou bons de commande", "les factures et relances", "les échanges avec l'autre partie"],
+  difficultes: ["l'extrait Kbis", "les derniers comptes annuels et une situation de trésorerie", "la liste des dettes (fournisseurs, URSSAF, impôts)"],
+  "bail-commercial": ["le bail commercial et ses avenants", "les derniers avis d'échéance ou quittances", "tout acte reçu (commandement, congé, assignation)"],
+  "dommage-corporel": ["les certificats médicaux et comptes rendus", "le constat ou le procès-verbal, le cas échéant", "les échanges avec l'assureur (offre, rapport d'expertise)"],
+  successions: ["l'acte de décès et le livret de famille", "le testament ou la donation, le cas échéant", "les échanges avec le notaire"],
+  fiscal: ["le courrier de l'administration fiscale", "vos dernières déclarations et avis d'imposition", "les justificatifs utiles"],
+  surendettement: ["la liste de vos dettes et créanciers", "vos justificatifs de revenus et de charges", "le courrier de la Banque de France, le cas échéant"],
   immobilier: ["le bail, l'acte de vente ou le règlement de copropriété", "les échanges avec l'autre partie (courriers, mises en demeure)", "les factures, devis ou constats utiles"],
   sante: ["votre dossier médical et les comptes rendus d'hospitalisation", "les certificats médicaux", "les échanges avec l'établissement ou l'assureur"],
   consommation: ["la facture, le bon de commande ou le contrat", "les échanges avec le professionnel", "les preuves du défaut ou du litige (photos, constats)"],
@@ -23,11 +31,14 @@ const PIECES: Record<string, string[]> = {
   bilan: ["vos relevés bancaires de l'exercice", "vos factures d'achat et de vente", "le dernier bilan"],
   fiscalite: ["vos dernières déclarations fiscales", "le courrier de l'administration, le cas échéant"],
   social: ["la liste de vos salariés et leurs contrats", "vos derniers bulletins de paie"],
+  "comptable-immobilier": ["les actes d'achat et tableaux d'amortissement des prêts", "les baux et relevés de loyers encaissés", "vos dernières déclarations (2044, 2031 ou liasse de la SCI)"],
+  "comptable-juridique": ["les statuts à jour et l'extrait Kbis", "les derniers comptes annuels", "les procès-verbaux d'assemblée précédents"],
+  "comptable-particulier": ["votre dernier avis d'imposition", "vos justificatifs de revenus de l'année"],
 };
 
 export function messageModele(r: Base) {
   const cle = (r.motif?.domaine_id ?? "").split("-").slice(1).join("-");
-  const pieces = r.suivi_existant ? [] : PIECES[cle] ?? [];
+  const pieces = r.suivi_existant ? [] : PIECES[r.motif?.domaine_id ?? ""] ?? PIECES[cle] ?? [];
   const avocat = r.pro.profession === "avocat";
   const mode = (MODE_LABEL[r.mode ?? r.type_rdv] ?? "").toLowerCase();
   const lignes = [

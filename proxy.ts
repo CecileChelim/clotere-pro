@@ -10,9 +10,44 @@ function redirect301(request: NextRequest, cible: string) {
   return NextResponse.redirect(url, 301);
 }
 
+/* ── Domaines personnalisés des sites (dashboard › Mon site › Publication) ──
+   www.cabinet-dupont.fr affiche le site ; cabinet-dupont.fr redirige vers www.
+   Correspondance domaine -> slug gardée 5 min en mémoire. */
+const HOTES_CLOTERE = /(^|\.)clotere\.fr$|netlify\.app$|^localhost$|\.localhost$|comptelio|^\d+\.\d+\.\d+\.\d+$/;
+const cacheDomaines = new Map<string, { slug: string | null; expire: number }>();
+
+async function slugDuDomaine(domaine: string): Promise<string | null> {
+  const c = cacheDomaines.get(domaine);
+  if (c && c.expire > Date.now()) return c.slug;
+  let slug: string | null = null;
+  try {
+    const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/sites?select=slug&domaine_statut=eq.connecte&domaine=eq.${encodeURIComponent(domaine)}&limit=1`;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const r = await fetch(url, { headers: { apikey: key, Authorization: `Bearer ${key}` } });
+    if (r.ok) slug = ((await r.json()) as { slug: string }[])[0]?.slug ?? null;
+  } catch { /* domaine inconnu ou base indisponible : 404 standard */ }
+  cacheDomaines.set(domaine, { slug, expire: Date.now() + 5 * 60e3 });
+  return slug;
+}
+
 export async function proxy(request: NextRequest) {
   const host = (request.headers.get("host") ?? "").split(":")[0];
   const path = request.nextUrl.pathname;
+
+  if (host && !HOTES_CLOTERE.test(host)) {
+    const domaine = host.replace(/^www\./, "");
+    const slug = await slugDuDomaine(domaine);
+    if (slug) {
+      if (!host.startsWith("www.")) return NextResponse.redirect(`https://www.${domaine}${path}${request.nextUrl.search}`, 301);
+      if (path === `/${slug}`) return redirect301(request, "/");
+      if (path === "/") {
+        const url = request.nextUrl.clone();
+        url.pathname = `/${slug}`;
+        return NextResponse.rewrite(url);
+      }
+      // /rdv/…, /api/…, mentions légales : servis tels quels sur le domaine du cabinet.
+    }
+  }
   const avocat = host.startsWith("avocat.");
   const comptable = host.startsWith("comptable.") || host.includes("comptelio");
   const prod = host.endsWith("clotere.fr");

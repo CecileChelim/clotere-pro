@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { PROFESSIONS, type Profession } from "@/lib/professions-config";
 import type { Horaires } from "@/lib/horaires";
-import { questionnaireComplet, questionsVisibles } from "@/lib/rdv/questionnaires";
+import { placesQuestions, questionnaireComplet, questionsVisibles } from "@/lib/rdv/questionnaires";
 
 export type BookingPro = {
   id: string; nomAffiche: string; initiales: string; photo: string | null; bio: string | null;
@@ -15,7 +15,9 @@ export type BookingPro = {
   expertise: { domaine: string; specialites: string[] }[];
   honoraires: { modes: string[]; paiement: string[]; services: string[] };
 };
-type Motif = { id: string; libelle: string; description: string | null; duree_min: number; modes: string[] | null; domaine_id?: string | null; questionnaire_actif?: boolean };
+/** sujets : sous-domaines cochés par le pro sous ce motif ; le client en choisit un (ou « Autre »). */
+type Motif = { id: string; libelle: string; description: string | null; duree_min: number; modes: string[] | null; domaine_id?: string | null; questionnaire_actif?: boolean; sujets?: { id: string; label: string }[] };
+const SUJET_AUTRE = "autre";
 type Mode = "cabinet" | "visio" | "telephone";
 
 /* ---------- Icônes (traits fins, style Heroicons) ---------- */
@@ -95,7 +97,8 @@ function Radio({ on }: { on: boolean }) {
 const choice = (on: boolean) =>
   `flex w-full items-center gap-4 rounded-xl border-2 px-3.5 py-3 text-left transition ${on ? "border-violet-600 bg-violet-50/60" : "border-gray-200 bg-white hover:border-gray-300"}`;
 
-export function BookingFlow({ pro, motifs, horaires, indisponible = false }: { pro: BookingPro; motifs: Motif[]; horaires: Horaires; indisponible?: boolean }) {
+/** integre : tunnel affiché dans une fenêtre sur clotere.fr (iframe), sans en-tête ni colonne du pro. */
+export function BookingFlow({ pro, motifs, horaires, indisponible = false, integre = false }: { pro: BookingPro; motifs: Motif[]; horaires: Horaires; indisponible?: boolean; integre?: boolean }) {
   const conf = PROFESSIONS[pro.profession];
   const lePro = pro.profession === "avocat" ? "l'avocat" : "le cabinet";
   const [step, setStep] = useState(0);
@@ -150,8 +153,11 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false }: { p
   const motifsCompatibles = motifs.filter((m) => !mode || !(m.modes ?? []).length || (m.modes ?? []).includes(mode));
   const suivi = motif?.id === "suivi";
   // Questions du domaine du motif (si le pro ne les a pas coupées).
-  const domaineQ = !suivi && motif?.questionnaire_actif !== false ? motif?.domaine_id ?? null : null;
-  const questions = questionsVisibles(domaineQ, reponses);
+  const domaineQ = !suivi ? motif?.domaine_id ?? null : null;
+  // Sujet (sous-domaine) : demandé seulement si le motif en propose plusieurs ; il compte dans les 5 questions.
+  const sujets = !suivi ? motif?.sujets ?? [] : [];
+  const demanderSujet = sujets.length > 1;
+  const questions = questionsVisibles(domaineQ, reponses, placesQuestions({ sujet: demanderSujet, deja: !suivi }));
   const duree = motif?.duree_min ?? 30;
   const dateLabel = jour && heure ? `${JOURS_LONGS[jour.date.getDay()]} ${jour.date.getDate()} ${MOIS[jour.date.getMonth()]} à ${heure.replace(":", "h")}` : "";
   const STEPS = ["Créneau", "Motif", suivi ? "Message" : "Votre situation", "Coordonnées"];
@@ -170,7 +176,7 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false }: { p
         professional_id: pro.id, motif_id: suivi ? null : motif.id, mode,
         client_nom: c.nom, client_prenom: c.prenom, client_email: c.email, client_tel: c.telephone,
         message: message || (suivi ? "Suivi de dossier existant" : null), suivi_existant: suivi, deja_avocat: suivi ? null : deja,
-        reponses: questions.length ? reponses : undefined,
+        reponses: questions.length || reponses.sujet ? reponses : undefined,
         creneau_debut: debut.toISOString(), creneau_fin: fin.toISOString(), source, hp: hp || undefined,
       }),
     });
@@ -179,13 +185,21 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false }: { p
     if (!res.ok || !json.ok) { setError(json.error || "L'envoi a échoué, merci de réessayer."); return; }
     setSuiviUrl(json.suivi ?? null);
     setStep(4);
+    // Intégré sur clotere.fr : la page parente pousse l'événement de lead (aucune donnée personnelle transmise).
+    if (integre) window.parent?.postMessage({ type: "clotere:rdv-envoye", profession: pro.profession, mode, motif: motif.libelle }, "*");
   }
 
   const cabinetNom = pro.cabinet || pro.nomAffiche;
   const cabinetInit = cabinetNom.split(/\s+/).filter((w) => /^[A-Za-zÀ-ÿ]/.test(w)).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 
+  // Intégré : l'étape courante est remontée à la fenêtre parente (titre et suivi des étapes).
+  useEffect(() => {
+    if (integre) window.parent?.postMessage({ type: "clotere:rdv-etape", etape: step + 1 }, "*");
+  }, [integre, step]);
+
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
+    <div className={integre ? "flex flex-col bg-white" : "flex min-h-screen flex-col bg-gray-50"}>
+      {!integre && <>
       <div className="h-1 bg-violet-600" />
       {/* Barre du cabinet */}
       <header className="border-b border-gray-200 bg-white">
@@ -200,14 +214,17 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false }: { p
           </p>
         </div>
       </header>
+      </>}
 
-      <main className="mx-auto w-full max-w-[1080px] flex-1 px-3 py-4 sm:px-6 sm:py-10">
+      <main className={integre ? "w-full flex-1" : "mx-auto w-full max-w-[1080px] flex-1 px-3 py-4 sm:px-6 sm:py-10"}>
+        {!integre && <>
         <h1 className="px-1 text-xl font-bold tracking-tight text-gray-900 sm:px-0 sm:text-[28px]">Prendre rendez-vous</h1>
         <p className="mt-2 hidden text-[15px] text-gray-500 sm:block">Réservez un créneau en quelques minutes. Votre demande est confirmée par {lePro} sous 24 h ouvrées.</p>
+        </>}
 
-        <div className="mt-3 grid grid-cols-1 overflow-hidden sm:mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm md:grid-cols-[300px_1fr]">
+        <div className={integre ? "grid grid-cols-1" : "mt-3 grid grid-cols-1 overflow-hidden sm:mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm md:grid-cols-[300px_1fr]"}>
           {/* ---------- Colonne pro ---------- */}
-          <aside className="flex flex-col border-b border-gray-200 p-4 sm:p-6 md:border-r md:border-b-0">
+          {!integre && <aside className="flex flex-col border-b border-gray-200 p-4 sm:p-6 md:border-r md:border-b-0">
             <div className="flex items-center gap-3 md:block">
               {pro.photo
                 ? <img src={pro.photo} alt={pro.nomAffiche} className="h-12 w-12 shrink-0 rounded-xl object-cover md:h-14 md:w-14" />
@@ -352,10 +369,10 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false }: { p
               </div>
             </div>
             </div>
-          </aside>
+          </aside>}
 
           {/* ---------- Module ---------- */}
-          <section className="p-5 sm:p-7">
+          <section className={integre ? "p-1 sm:p-2" : "p-5 sm:p-7"}>
             {step < 4 && (
               <>
                 <div className="grid grid-cols-4 gap-2">
@@ -460,7 +477,7 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false }: { p
                   {motifsCompatibles.map((m) => {
                     const on = motif?.id === m.id;
                     return (
-                      <button key={m.id} type="button" onClick={() => { if (motif?.id !== m.id) setReponses({}); setMotif(m); setStep(2); }} className={choice(on)}>
+                      <button key={m.id} type="button" onClick={() => { if (motif?.id !== m.id) setReponses(m.sujets?.length === 1 ? { sujet: m.sujets[0].id } : {}); setMotif(m); setStep(2); }} className={choice(on)}>
                         <span className="min-w-0 flex-1">
                           <span className="block text-sm font-semibold text-gray-900">{m.libelle}</span>
                           {m.description && <span className="block text-[13px] text-gray-500">{m.description}</span>}
@@ -478,6 +495,22 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false }: { p
             {step === 2 && (
               <div>
                 <h3 className="mt-5 text-center text-xl font-bold text-gray-900">{suivi ? "Un message pour votre dossier ?" : "Où en êtes-vous ?"}</h3>
+                {demanderSujet && (
+                  <>
+                    <p className="mt-6 text-sm font-semibold text-gray-900">Votre demande concerne…</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {[...sujets, { id: SUJET_AUTRE, label: "Autre" }].map((s) => {
+                        const on = reponses.sujet === s.id;
+                        return (
+                          <button key={s.id} type="button" onClick={() => setReponses({ ...reponses, sujet: s.id })}
+                            className={`rounded-full border-2 px-3.5 py-1.5 text-sm font-medium transition ${on ? "border-violet-600 bg-violet-50 text-violet-700" : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"}`}>
+                            {s.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
                 {!suivi && (
                   <>
                     <p className="mt-6 text-sm font-semibold text-gray-900">Avez-vous déjà un {conf.label} pour ce dossier ?</p>
@@ -513,7 +546,7 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false }: { p
                   placeholder={suivi ? "Référence ou objet de votre dossier…" : "Décrivez brièvement votre situation…"} />
                 <p className="mt-1.5 text-right text-xs text-gray-400">{message.length} / 500</p>
                 <div className="mt-6 flex justify-end">
-                  <button type="button" disabled={!suivi && (!deja || message.trim().length < 10 || !questionnaireComplet(domaineQ, reponses))} onClick={() => setStep(3)} className={btn}>Continuer <I d={P.chevR} className="h-4 w-4" /></button>
+                  <button type="button" disabled={!suivi && (!deja || (demanderSujet && !reponses.sujet) || message.trim().length < 10 || !questionnaireComplet(domaineQ, reponses, placesQuestions({ sujet: demanderSujet, deja: true })))} onClick={() => setStep(3)} className={btn}>Continuer <I d={P.chevR} className="h-4 w-4" /></button>
                 </div>
               </div>
             )}
@@ -552,7 +585,7 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false }: { p
                 <h3 className="mt-4 text-2xl font-bold text-gray-900">Votre demande a bien été envoyée</h3>
                 <p className="mt-3 text-gray-500">Le rendez-vous n&apos;est pas encore confirmé : {pro.nomAffiche} doit valider votre demande. Vous recevrez un email dès sa confirmation (pensez à vérifier vos spams).</p>
                 {suiviUrl && (
-                  <a href={suiviUrl} className="mt-6 inline-flex items-center justify-center rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-700">Suivre mon rendez-vous</a>
+                  <a href={suiviUrl} target={integre ? "_blank" : undefined} rel={integre ? "noopener" : undefined} className="mt-6 inline-flex items-center justify-center rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-700">Suivre mon rendez-vous</a>
                 )}
                 <div className="mt-8 rounded-2xl border border-gray-200 p-5 text-left">
                   <p className="text-sm font-semibold text-gray-900 first-letter:uppercase">{dateLabel}</p>
@@ -569,12 +602,12 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false }: { p
         </div>
       </main>
 
-      <footer className="mx-auto flex w-full max-w-[1080px] flex-col justify-between gap-2 px-6 pb-8 text-[13px] text-gray-400 sm:flex-row">
+      {!integre && <footer className="mx-auto flex w-full max-w-[1080px] flex-col justify-between gap-2 px-6 pb-8 text-[13px] text-gray-400 sm:flex-row">
         <span>Prise de rendez-vous propulsée par {conf.brand}</span>
         <span><a href="https://notaire.clotere.fr/mentions-legales" className="hover:text-gray-600">Mentions légales</a> · <a href="https://notaire.clotere.fr/politique-confidentialite" className="hover:text-gray-600">Confidentialité</a></span>
-      </footer>
-      {/* Drawer « À propos » */}
-      <div className={`fixed inset-0 z-50 ${about ? "" : "pointer-events-none"}`} aria-hidden={!about}>
+      </footer>}
+      {/* Drawer « À propos » (absent en mode intégré : ses boutons d'ouverture sont masqués) */}
+      {!integre && <div className={`fixed inset-0 z-50 ${about ? "" : "pointer-events-none"}`} aria-hidden={!about}>
         <div onClick={() => setAbout(false)} className={`absolute inset-0 bg-gray-900/40 transition-opacity ${about ? "opacity-100" : "opacity-0"}`} />
         <aside role="dialog" aria-modal="true" aria-label={`À propos de ${pro.profession === "avocat" ? "Clotere" : "Clotere"}`}
           className={`absolute inset-y-0 right-0 flex w-full max-w-md flex-col bg-white shadow-2xl transition-transform duration-300 ${about ? "translate-x-0" : "translate-x-full"}`}>
@@ -627,7 +660,7 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false }: { p
             {" · "}<a href="https://notaire.clotere.fr/politique-confidentialite" className="hover:text-gray-900">Confidentialité</a>
           </div>
         </aside>
-      </div>
+      </div>}
     </div>
   );
 }

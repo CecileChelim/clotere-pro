@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { synchroniserGoogle, type AvisGoogle } from "@/lib/google";
-import { etatAbonnement } from "@/lib/abonnement";
+import { rdvDirectOuvert } from "@/lib/abonnement";
 import { createClient } from "@supabase/supabase-js";
 import { BookingFlow, type BookingPro } from "@/components/booking/BookingFlow";
 import { horairesDepuisRows } from "@/lib/horaires";
 import { PROFESSIONS } from "@/lib/professions-config";
-import { chargerTaxonomie, selectionParDomaine } from "@/lib/taxonomie";
+import { chargerTaxonomie, selectionParDomaine, sujetsDuMotif } from "@/lib/taxonomie";
 import { HONORAIRES_MODES, PAIEMENT_MOYENS, SERVICES, labels } from "@/lib/honoraires";
 
 type Params = { params: Promise<{ ville: string; slug: string }> };
@@ -16,20 +16,24 @@ async function charger(slug: string) {
   const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
   const { data: pro, error } = await db
     .from("professionals")
-    .select("id, prenom, nom, photo_url, bio, profession, ville, telephone, domaines, linkedin_url, honoraires_modes, paiement_moyens, services, cabinets(id, nom, adresse, code_postal, ville, site_web, telephone, google_rating, google_reviews_count, google_reviews_url, google_business_url, google_reviews, google_synced_at, google_place_id, google_place_url, trial_ends_at, subscription_status)")
+    .select("id, prenom, nom, photo_url, bio, profession, ville, telephone, domaines, linkedin_url, honoraires_modes, paiement_moyens, services, cabinets(id, nom, adresse, code_postal, ville, site_web, telephone, google_rating, google_reviews_count, google_reviews_url, google_business_url, google_reviews, google_synced_at, google_place_id, google_place_url, trial_ends_at, subscription_status, leads_ouverts, page_seule, offre_widget, site_paye, offre_rdv)")
     .eq("slug", slug)
     .maybeSingle();
   if (error) console.error("[page rdv] erreur Supabase :", error.message);
   if (!pro) return null;
   const [{ data: motifs }, { data: dispo }, { data: ps }, taxo] = await Promise.all([
-    db.from("motifs").select("id, libelle, description, duree_min, modes, actif, ordre, domaine_id, questionnaire_actif").eq("professional_id", pro.id).eq("actif", true).order("ordre"),
+    db.from("motifs").select("id, libelle, description, duree_min, modes, actif, ordre, domaine_id, questionnaire_actif, specialite_ids").eq("professional_id", pro.id).eq("actif", true).order("ordre"),
     db.from("availability").select("jour_semaine, heure_debut, heure_fin, date").eq("professional_id", pro.id),
     db.from("pro_specialites").select("specialite_id").eq("professional_id", pro.id),
     chargerTaxonomie(db, pro.profession === "comptable" ? "comptable" : "avocat"),
   ]);
   const expertise = selectionParDomaine(taxo, (ps ?? []).map((x: { specialite_id: string }) => x.specialite_id))
     .map((d) => ({ domaine: d.label, specialites: d.specialites.map((x) => x.label) }));
-  return { pro, motifs: motifs ?? [], horaires: horairesDepuisRows(dispo), expertise };
+  // Sujets proposés au client sous chaque motif (sous-domaines cochés par le pro), avec leur libellé.
+  const avecSujets = (motifs ?? []).map((m: { id: string; libelle: string; description: string | null; duree_min: number; modes: string[] | null; domaine_id: string | null; questionnaire_actif: boolean; specialite_ids: string[] | null }) => ({
+    ...m, sujets: sujetsDuMotif(taxo, m.domaine_id, m.specialite_ids).map(({ id, label }) => ({ id, label })),
+  }));
+  return { pro, motifs: avecSujets, horaires: horairesDepuisRows(dispo), expertise };
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -43,8 +47,13 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   };
 }
 
-export default async function BookingPage({ params }: Params) {
+export default async function BookingPage({ params, searchParams }: Params & { searchParams: Promise<{ integre?: string; source?: string }> }) {
   const { slug } = await params;
+  // ?integre=1 : tunnel affiché dans la fiche clotere.fr (iframe), voir clotere-site/components/fichePro.
+  const sp = await searchParams;
+  const integre = sp.integre === "1";
+  // Venue de clotere.fr : ouverte si les leads sont activés et sous le plafond (indépendamment de l'abonnement).
+  const viaClotere = sp.source === "clotere";
   const d = await charger(slug);
   if (!d) notFound();
 
@@ -82,5 +91,5 @@ export default async function BookingPage({ params }: Params) {
     },
   };
 
-  return <BookingFlow pro={pro} motifs={d.motifs} horaires={d.horaires} indisponible={!etatAbonnement(cab).actif} />;
+  return <BookingFlow pro={pro} motifs={d.motifs} horaires={d.horaires} indisponible={viaClotere ? !cab?.leads_ouverts : !rdvDirectOuvert(cab)} integre={integre} />;
 }

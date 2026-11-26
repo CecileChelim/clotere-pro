@@ -4,6 +4,7 @@ import { brouillonValide, creerSite } from "@/lib/site/serveur";
 import { notifierSlack } from "@/lib/slack";
 import { urlEspace } from "@/lib/mail-compte";
 import { PRIX } from "@/lib/tarifs";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 // Fin du créateur de site : l'utilisateur vient de s'inscrire (ou est déjà connecté) → cabinet, profil et site créés.
 export async function POST(req: Request) {
@@ -24,7 +25,13 @@ export async function POST(req: Request) {
         ["Template", b.template], ["Compte", r.nouveauCompte ? "nouveau (essai 7 jours)" : "client existant"],
       ], { url, label: "Voir le site" });
     }
-    return NextResponse.json({ ok: true, slug: r.slug });
+    // Formule page : le site est un abonnement séparé, payé à sa création (paiement = "checkout" → option « site »).
+    let paiement: "checkout" | null = null;
+    if (!r.nouveauCompte && !r.dejaExistant) {
+      const { data: cab } = await createAdminClient().from("cabinets").select("page_seule, site_paye").eq("id", r.cabinetId).maybeSingle();
+      if (cab?.page_seule && !cab.site_paye) paiement = "checkout";
+    }
+    return NextResponse.json({ ok: true, slug: r.slug, paiement });
   } catch (e) {
     console.error("[site] création", e);
     // En local, on affiche la cause exacte pour pouvoir corriger.

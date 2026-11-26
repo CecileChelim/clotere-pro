@@ -11,8 +11,13 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "confirm" | "error">("idle");
   const [error, setError] = useState("");
+  // « Créer votre page » (apport d'affaires) : page gratuite, sans abonnement ni essai.
+  const [pageSeule, setPageSeule] = useState(false);
 
-  useEffect(() => setProfession(professionFromHost(window.location.host)), []);
+  useEffect(() => {
+    setProfession(professionFromHost(window.location.host));
+    setPageSeule(new URLSearchParams(window.location.search).get("formule") === "page");
+  }, []);
   const conf = PROFESSIONS[profession];
 
   async function handleSubmit(e: React.FormEvent) {
@@ -22,7 +27,7 @@ export default function SignupPage() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=/inscription`, data: { profession } },
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=/inscription`, data: { profession, ...(pageSeule ? { formule: "page" } : {}) } },
     });
     if (error) {
       setError(error.message.includes("registered") ? "Un compte existe déjà avec cet email." : "Une erreur est survenue, merci de réessayer.");
@@ -38,8 +43,10 @@ export default function SignupPage() {
     <div className="flex min-h-screen items-center justify-center bg-white px-6">
       <div className="w-full max-w-sm">
         <Link href="/" className="text-xl font-bold tracking-tight text-gray-950">{conf.brand}</Link>
-        <h1 className="mt-10 text-3xl font-medium tracking-tight text-gray-950">Créer votre compte</h1>
-        <p className="mt-2 text-sm text-gray-600">7 jours d&apos;essai gratuit, sans carte bancaire.</p>
+        <h1 className="mt-10 text-3xl font-medium tracking-tight text-gray-950">{pageSeule ? `Créer votre page ${conf.label}` : "Créer votre compte"}</h1>
+        <p className="mt-2 text-sm text-gray-600">
+          {pageSeule ? "Développez votre clientèle avec un modèle 100 % à la performance : sans abonnement, sans frais fixes." : <>7 jours d&apos;essai gratuit, sans carte bancaire.</>}
+        </p>
 
         {status === "confirm" ? (
           <div className="mt-8 rounded-2xl bg-gray-50 p-5 text-sm text-gray-700 ring-1 ring-black/5">
@@ -52,8 +59,12 @@ export default function SignupPage() {
             <input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mot de passe (8 caractères min.)"
               className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-950" />
             <button type="submit" disabled={status === "sending"} className="w-full rounded-full bg-gray-950 px-4 py-3 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-60">
-              {status === "sending" ? "Création…" : "Créer mon compte"}
+              {status === "sending" ? "Création…" : pageSeule ? "Créer ma page" : "Créer mon compte"}
             </button>
+            <p className="text-xs text-gray-500">
+              En créant votre compte, vous acceptez les{" "}
+              <Link href="/cgv" target="_blank" className="underline underline-offset-2">conditions générales de vente</Link>.
+            </p>
             {status === "error" && <p className="text-sm text-red-600">{error}</p>}
           </form>
         )}

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { DateTile } from "@/components/rdv/DateTile";
 import { SupprimerRdv } from "@/components/rdv/SupprimerRdv";
@@ -9,7 +10,20 @@ export type Booking = {
   client_nom: string; client_prenom: string | null; client_email: string; client_tel: string | null;
   message: string | null; suivi_existant: boolean | null; deja_avocat: string | null; created_at: string; token_pro: string;
   motifs: { libelle: string; duree_min?: number } | null;
+  /** Provenance de la demande (paramètre ?source= du lien de réservation). */
+  source?: string | null;
 };
+
+/** Provenance d'un rendez-vous : clotere (page clotere.fr), site, google, linkedin, mail ; direct = lien ou widget. */
+export const PROVENANCES: Record<string, { label: string; cls: string }> = {
+  clotere: { label: "Clotere", cls: "bg-violet-50 text-violet-700 ring-violet-200" },
+  site: { label: "Site internet", cls: "bg-sky-50 text-sky-700 ring-sky-200" },
+  google: { label: "Fiche Google", cls: "bg-amber-50 text-amber-700 ring-amber-200" },
+  linkedin: { label: "LinkedIn", cls: "bg-blue-50 text-blue-700 ring-blue-200" },
+  mail: { label: "Signature mail", cls: "bg-gray-100 text-gray-700 ring-gray-200" },
+  direct: { label: "Widget", cls: "bg-gray-100 text-gray-700 ring-gray-200" },
+};
+const provenance = (s?: string | null) => PROVENANCES[s ?? "direct"] ?? PROVENANCES.direct;
 
 const MODE: Record<string, string> = { visio: "Visio", telephone: "Téléphone", tel: "Téléphone", cabinet: "Au cabinet" };
 const DEJA: Record<string, string> = { non: "Pas encore d'avocat", oui: "A déjà un avocat", changer: "Veut changer d'avocat" };
@@ -24,7 +38,11 @@ const STATUT: Record<string, { label: string; cls: string }> = {
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
 const fmtHeure = (iso: string) => new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 
-export function BookingsList({ initial, profession = "avocat", avisPossible = false }: { initial: Booking[]; profession?: string; avisPossible?: boolean }) {
+export function BookingsList({ initial, profession = "avocat", avisPossible = false, masque = false }: {
+  initial: Booking[]; profession?: string; avisPossible?: boolean;
+  /** Formule page sans carte : le client et les actions sont masqués (données retirées côté serveur). */
+  masque?: boolean;
+}) {
   const metier = profession === "comptable" ? "d'expert-comptable" : "d'avocat";
   const [items, setItems] = useState(initial);
   const [flash, setFlash] = useState("");
@@ -73,8 +91,18 @@ export function BookingsList({ initial, profession = "avocat", avisPossible = fa
                     <p className="mt-0.5 text-sm text-gray-600">{MODE[b.mode ?? b.type_rdv] ?? b.type_rdv}{b.motifs?.duree_min ? ` · ${b.motifs.duree_min} min` : ""}</p>
                     <p className="mt-0.5 text-sm font-medium text-gray-900">{b.suivi_existant ? "Suivi de dossier existant" : b.motifs?.libelle ?? "Rendez-vous"}</p>
                   </div>
-                  <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${st.cls}`}>{st.label}</span>
+                  <div className="flex shrink-0 flex-col items-end gap-1.5">
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ring-1 ${st.cls}`}>{st.label}</span>
+                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ring-1 ${provenance(b.source).cls}`}>via {provenance(b.source).label}</span>
+                  </div>
                 </div>
+
+                {masque ? (
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 bg-violet-50/60 px-5 py-4 sm:px-6">
+                    <p className="text-sm text-violet-900">Ajoutez votre carte pour voir le client et répondre à sa demande.</p>
+                    <Link href="/dashboard/abonnement" className="rounded-full bg-gray-950 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">Ajouter ma carte</Link>
+                  </div>
+                ) : (<>
 
                 <div className="border-t border-gray-100 px-5 py-4 sm:px-6">
                   <p className="font-semibold text-gray-950">
@@ -118,6 +146,7 @@ export function BookingsList({ initial, profession = "avocat", avisPossible = fa
                   </a>
                   </div>
                 </div>
+                </>)}
               </li>
             );
           })}

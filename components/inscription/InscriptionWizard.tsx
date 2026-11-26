@@ -6,18 +6,20 @@ import { createBrowserClient } from "@supabase/ssr";
 import { AvatarUploader } from "@/components/onboarding/AvatarUploader";
 import { MotifsEditor } from "@/components/pro/MotifsEditor";
 import { AdresseAutocomplete, type LieuDetail } from "@/components/pro/AdresseAutocomplete";
-import { SpecialitesPicker } from "@/components/pro/SpecialitesPicker";
+import { DomainesPicker, SujetsParDomaine, competencesSansMotif, sujetsParDefaut } from "@/components/pro/DomainesSujets";
 import { avecPrefixe, LINKEDIN_PREFIX, LINKEDIN_STRIP, PrefixInput } from "@/components/pro/PrefixInput";
 import { PROFESSIONS, type MotifDraft, type Profession } from "@/lib/professions-config";
-import { motifsDepuisSpecialites, selectionParDomaine, type Domaine } from "@/lib/taxonomie";
+import { competencesDe, motifsDepuisSpecialites, selectionParDomaine, type Domaine } from "@/lib/taxonomie";
+import { devinerBarreau, majuscule } from "@/lib/barreaux";
 
-export type Etape = "vous" | "cabinet" | "presence" | "expertise" | "motifs";
+export type Etape = "vous" | "cabinet" | "presence" | "expertise" | "sujets" | "motifs";
 const ETAPES: { id: Etape; label: string }[] = [
   { id: "vous", label: "Vous" },
   { id: "cabinet", label: "Cabinet" },
   { id: "presence", label: "En ligne" },
-  { id: "expertise", label: "Spécialités" },
-  { id: "motifs", label: "Motifs de rdv" },
+  { id: "expertise", label: "Domaines" },
+  { id: "sujets", label: "Motifs de rdv" },
+  { id: "motifs", label: "Rendez-vous" },
 ];
 
 const input = "w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-gray-950";
@@ -29,9 +31,11 @@ const slugify = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowe
 type Props = {
   profession: Profession; userId: string; userEmail: string; taxo: Domaine[];
   initialStep: Etape; proId: string | null; cabinetId: string | null;
+  /** Inscription « Créer votre page » : page gratuite sans abonnement (apport d'affaires). */
+  pageSeule?: boolean;
 };
 
-export function InscriptionWizard({ profession, userId, userEmail, taxo, initialStep, proId: proInit, cabinetId: cabInit }: Props) {
+export function InscriptionWizard({ profession, userId, userEmail, taxo, initialStep, proId: proInit, cabinetId: cabInit, pageSeule = false }: Props) {
   const conf = PROFESSIONS[profession];
   const supabase = useMemo(() => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!), []);
   const [step, setStep] = useState<Etape>(initialStep);
@@ -47,9 +51,15 @@ export function InscriptionWizard({ profession, userId, userEmail, taxo, initial
   const [siret, setSiret] = useState("");
   const [siretStatus, setSiretStatus] = useState<"idle" | "loading" | "found" | "notfound">("idle");
   const [cab, setCab] = useState({ nom: "", adresse: "", code_postal: "", ville: "", telephone: "", barreau: "" });
+  // Barreau déduit de l'adresse tant que l'avocat ne l'a pas saisi lui-même.
+  const [barreauSaisi, setBarreauSaisi] = useState(false);
+  const barreau = barreauSaisi ? cab.barreau : devinerBarreau(cab.code_postal, cab.ville) ?? cab.barreau;
   // En ligne
   const [web, setWeb] = useState({ site: "", google: "", linkedin: "" });
   // Spécialités & motifs
+  // Domaines de compétence (étape « expertise »), puis motifs de rendez-vous dans ces domaines (étape « sujets »).
+  const competences = useMemo(() => competencesDe(taxo), [taxo]);
+  const [domainesChoisis, setDomainesChoisis] = useState<string[]>([]);
   const [specs, setSpecs] = useState<string[]>([]);
   const [motifs, setMotifs] = useState<MotifDraft[]>([]);
 
@@ -112,8 +122,10 @@ export function InscriptionWizard({ profession, userId, userEmail, taxo, initial
     if (step === "cabinet") {
       const { data: c, error: e1 } = await supabase.from("cabinets").insert({
         profession, siret: siret.replace(/\s/g, "") || null, nom: cab.nom, adresse: cab.adresse, code_postal: cab.code_postal,
-        ville: cab.ville, telephone: cab.telephone || vous.telephone || null, barreau: profession === "avocat" ? cab.barreau || null : null,
+        ville: cab.ville, telephone: cab.telephone || vous.telephone || null, barreau: profession === "avocat" ? majuscule(barreau) || null : null,
         owner_auth_user_id: userId,
+        // Formule page : l'apport d'affaires (la page clotere.fr) est actif tout de suite ; la carte est demandée à la 1re demande.
+        ...(pageSeule ? { page_seule: true, leads_actifs: true, leads_ouverts: true, leads_plafond: 10, leads_actives_at: new Date().toISOString() } : {}),
       }).select("id").single();
       if (e1 || !c) return fail("Impossible d'enregistrer le cabinet.");
       const { data: p, error: e2 } = await supabase.from("professionals").insert({
@@ -134,6 +146,16 @@ export function InscriptionWizard({ profession, userId, userEmail, taxo, initial
     }
 
     if (step === "expertise") {
+      // Motifs pré-cochés : ceux déjà choisis dans les domaines retenus, sinon les plus demandés de chaque nouveau domaine.
+      const retenues = competences.filter((c) => domainesChoisis.includes(c.id));
+      const garde = specs.filter((id) => retenues.some((c) => c.domaines.some((d) => d.specialites.some((x) => x.id === id))));
+      const nouveaux = competencesSansMotif(competences, domainesChoisis, garde).map((c) => c.id);
+      setSpecs([...garde, ...sujetsParDefaut(competences, nouveaux)]);
+      setSaving(false); setStep("sujets"); return;
+    }
+
+    if (step === "sujets") {
+      if (competencesSansMotif(competences, domainesChoisis, specs).length) return fail("Choisissez au moins un motif dans chaque domaine.");
       await supabase.from("pro_specialites").delete().eq("professional_id", proId);
       if (specs.length) await supabase.from("pro_specialites").insert(specs.map((id) => ({ professional_id: proId, specialite_id: id })));
       await supabase.from("professionals").update({ domaines: selectionParDomaine(taxo, specs).map((d) => d.id), onboarding_step: "motifs" }).eq("id", proId);
@@ -149,12 +171,14 @@ export function InscriptionWizard({ profession, userId, userEmail, taxo, initial
         professional_id: proId, libelle: m.libelle.trim(), description: m.description.trim() || null, duree_min: m.duree_min,
         modes: m.modes, prix_type: "gratuit", prix_euros: null, actif: m.actif, ordre: i,
         domaine_id: m.domaine_id ?? null, questionnaire_actif: m.questionnaire_actif ?? true,
+        specialite_ids: m.domaine_id ? m.specialite_ids ?? [] : [],
       })));
       if (e1) return fail("Impossible d'enregistrer les motifs.");
       await supabase.from("professionals").update({ onboarding_step: "horaires" }).eq("id", proId);
       await fetch("/api/notif/inscription", { method: "POST" }).catch(() => {});
       try { sessionStorage.setItem(FLAG_INSCRIPTION, "1"); } catch { /* ignore */ }
-      window.location.href = "/dashboard";
+      // Page seule : direction l'activation de l'apport d'affaires (tarif et CGV présentés avant la carte).
+      window.location.href = pageSeule ? "/dashboard?bienvenue=1" : "/dashboard";
     }
   }
 
@@ -171,10 +195,10 @@ export function InscriptionWizard({ profession, userId, userEmail, taxo, initial
   return (
     <div className="relative min-h-screen bg-white">
       <div className="bg-brand-gradient absolute inset-x-2 top-2 h-56 rounded-[2rem] opacity-70" />
-      <div className="relative mx-auto max-w-2xl px-6 py-10">
+      <div className="relative mx-auto max-w-4xl px-6 py-10">
         <p className="text-lg font-bold tracking-tight text-gray-950">{conf.brand}</p>
 
-        <ol className="mt-8 grid grid-cols-5 gap-2">
+        <ol className="mt-8 grid grid-cols-6 gap-2">
           {ETAPES.map((e, i) => (
             <li key={e.id}>
               <div className={`h-1 rounded-full ${i <= idx ? "bg-gray-950" : "bg-gray-950/15"}`} />
@@ -225,7 +249,8 @@ export function InscriptionWizard({ profession, userId, userEmail, taxo, initial
                 <div className="sm:col-span-4"><label className={label}>Ville</label><input required className={input} value={cab.ville} onChange={(e) => setCab({ ...cab, ville: e.target.value })} /></div>
                 <div className="sm:col-span-3"><label className={label}>Téléphone du cabinet</label><input type="tel" className={input} value={cab.telephone} onChange={(e) => setCab({ ...cab, telephone: e.target.value })} placeholder={vous.telephone || "01 23 45 67 89"} /></div>
                 {profession === "avocat" && (
-                  <div className="sm:col-span-3"><label className={label}>Barreau</label><input className={input} value={cab.barreau} onChange={(e) => setCab({ ...cab, barreau: e.target.value })} placeholder="Paris, Lyon…" /></div>
+                  <div className="sm:col-span-3"><label className={label}>Barreau</label><input className={input} value={barreau} onChange={(e) => { setBarreauSaisi(true); setCab({ ...cab, barreau: e.target.value }); }} placeholder="Paris, Lyon…" />
+                    {!barreauSaisi && barreau && <p className="mt-1.5 text-xs text-gray-500">Déduit de l&apos;adresse du cabinet, modifiable.</p>}</div>
                 )}
               </div>
               <Suivant />
@@ -250,19 +275,28 @@ export function InscriptionWizard({ profession, userId, userEmail, taxo, initial
 
           {step === "expertise" && (
             <>
-              <Titre t="Vos spécialités" s="Ouvrez chaque domaine et cochez vos spécialités : elles s'affichent sur votre page, et on prépare vos motifs de rendez-vous à partir de vos choix." />
-              <SpecialitesPicker taxo={taxo} value={specs} onChange={setSpecs} />
-              <Suivant disabled={!specs.length}>Générer mes motifs</Suivant>
+              <Titre t="Vos domaines de compétence" s="Cochez les domaines dans lesquels vous intervenez. À l'étape suivante, vous choisirez vos motifs de rendez-vous dans chacun." />
+              <DomainesPicker competences={competences} value={domainesChoisis} onChange={setDomainesChoisis} />
+              <Suivant disabled={!domainesChoisis.length} />
+            </>
+          )}
+
+          {step === "sujets" && (
+            <>
+              <Titre t="Dans ces domaines, vos motifs de rendez-vous"
+                s="Cochez les demandes pour lesquelles un client peut prendre rendez-vous avec vous. Elles s'affichent sur votre page, et le client choisit la sienne au moment de réserver." />
+              <SujetsParDomaine competences={competences} choisies={domainesChoisis} value={specs} onChange={setSpecs} />
+              <Suivant disabled={!specs.length}>Continuer</Suivant>
             </>
           )}
 
           {step === "motifs" && (
             <>
-              <Titre t="Vos motifs de rendez-vous" s="Préparés à partir de vos spécialités. Ajustez librement le libellé, la durée et le format." />
+              <Titre t="Vos rendez-vous" s="Préparés à partir de vos motifs. Ajustez la durée, le format (cabinet, visio, téléphone) et les motifs proposés au client." />
               <div className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-600 ring-1 ring-black/5">
                 « <strong className="text-gray-950">Suivi de dossier existant</strong> » est toujours proposé en premier à vos clients : inutile de le créer.
               </div>
-              <MotifsEditor motifs={motifs} domaines={taxo} onChange={setMotifs} />
+              <MotifsEditor motifs={motifs} domaines={taxo} specsPro={specs} onChange={setMotifs} />
               <Suivant>Terminer</Suivant>
             </>
           )}

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { after } from "next/server";
-import { etatAbonnement } from "@/lib/abonnement";
+import { siteEnLigne } from "@/lib/abonnement";
 import { synchroniserGoogle } from "@/lib/google";
 import { professionFromHost } from "@/lib/professions-config";
 import { chargerSitePublic } from "@/lib/site/serveur";
@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const c = s.rendu.contenu;
   const titre = `${c.hero.surtitre} | ${s.rendu.cabinet.nom}`;
   // Indexé seulement une fois l'abonnement payé (pendant l'essai : en ligne mais noindex).
-  const indexable = s.cab?.subscription_status === "actif";
+  const indexable = s.cab?.page_seule ? !!s.cab?.site_paye : s.cab?.subscription_status === "actif";
   return {
     title: { absolute: titre },
     description: c.hero.accroche,
@@ -45,7 +45,7 @@ export default async function SitePage({ params }: Params) {
   const host = (await headers()).get("host") ?? "";
   if (host.endsWith("clotere.fr") && professionFromHost(host) !== s.rendu.profession) redirect(`${SITES[s.rendu.profession]}/${s.site.slug}`);
 
-  if (!etatAbonnement(s.cab).actif || !s.cab?.offre_site) {
+  if (!siteEnLigne(s.cab)) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-white px-6 text-center">
         <div>

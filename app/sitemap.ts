@@ -23,9 +23,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
   // Sites créés avec Clotere : seulement ceux dont l'abonnement est payé (pendant l'essai, ils sont en noindex).
   const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-  const { data: sites } = await db.from("sites").select("slug, updated_at, cabinets!inner(subscription_status, offre_site)")
-    .eq("profession", profession).eq("cabinets.subscription_status", "actif").eq("cabinets.offre_site", true);
-  const sitesClients: MetadataRoute.Sitemap = (sites ?? []).map((x: { slug: string; updated_at: string }) => ({
+  const { data: sites } = await db.from("sites").select("slug, updated_at, cabinets!inner(subscription_status, offre_site, page_seule, site_paye)")
+    .eq("profession", profession).eq("cabinets.offre_site", true);
+  type L = { slug: string; updated_at: string; cabinets: { subscription_status: string; page_seule: boolean; site_paye: boolean } | { subscription_status: string; page_seule: boolean; site_paye: boolean }[] };
+  // Formule page : site payé à part (site_paye) ; sinon abonnement de base actif.
+  const payes = ((sites ?? []) as L[]).filter((x) => { const c = Array.isArray(x.cabinets) ? x.cabinets[0] : x.cabinets; return c?.page_seule ? c.site_paye : c?.subscription_status === "actif"; });
+  const sitesClients: MetadataRoute.Sitemap = payes.map((x) => ({
     url: `${siteUrl}/${x.slug}`, lastModified: x.updated_at, changeFrequency: "monthly", priority: 0.5,
   }));
   return [...landings, ...articles, ...sitesClients];

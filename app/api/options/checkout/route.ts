@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { cabinetConnecte } from "@/lib/visibilite-serveur";
 import { stripe } from "@/lib/stripe";
-import { estOption, OPTIONS } from "@/lib/options";
+import { estOption, OPTIONS, prixSite } from "@/lib/options";
 import { PROFESSIONS } from "@/lib/professions-config";
 import { notifierSlack } from "@/lib/slack";
 
@@ -16,17 +16,23 @@ export async function POST(req: Request) {
   if (!estOption(option)) return NextResponse.json({ ok: false, error: "Option inconnue" }, { status: 400 });
   if (ctx.pro.role === "membre") return NextResponse.json({ ok: false, error: "Seul le titulaire du cabinet peut activer une option." }, { status: 403 });
   const { cab, pro } = ctx;
-  if ((option === "avis" && (cab.offre_avis || cab.offre_visibilite)) || (option === "visibilite" && cab.offre_visibilite)) {
+  if ((option === "avis" && (cab.offre_avis || cab.offre_visibilite)) || (option === "visibilite" && cab.offre_visibilite)
+    || (option === "widget" && cab.offre_widget) || (option === "site" && (cab.site_paye || !cab.offre_site))) {
     return NextResponse.json({ ok: false, error: "Option déjà active" }, { status: 400 });
   }
 
   const conf = OPTIONS[option];
   const brand = PROFESSIONS[pro.profession === "comptable" ? "comptable" : "avocat"].brand;
-  const prix = process.env[conf.envPrix];
+  const prix = option === "site" ? undefined : process.env[conf.envPrix];
+  const montant = option === "site" ? prixSite(cab) : conf.prixMensuelHT;
+  const { count: nbPros } = option === "widget"
+    ? await createAdminClient().from("professionals").select("id", { count: "exact", head: true }).eq("cabinet_id", cab.id)
+    : { count: 1 };
+  const quantite = Math.max(1, nbPros ?? 1);
   const prixLancement = conf.envPrixLancement ? process.env[conf.envPrixLancement] : undefined;
   const lignes: Record<string, unknown>[] = [prix
-    ? { price: prix, quantity: 1 }
-    : { quantity: 1, price_data: { currency: "eur", unit_amount: conf.prixMensuelHT * 100, recurring: { interval: "month" }, tax_behavior: "exclusive", product_data: { name: `${brand} — ${conf.produit}` } } }];
+    ? { price: prix, quantity: quantite }
+    : { quantity: quantite, price_data: { currency: "eur", unit_amount: montant * 100, recurring: { interval: "month" }, tax_behavior: "exclusive", product_data: { name: `${brand} — ${conf.produit}` } } }];
   if (conf.fraisLancementHT) {
     lignes.push(prixLancement
       ? { price: prixLancement, quantity: 1 }
@@ -45,8 +51,8 @@ export async function POST(req: Request) {
       billing_address_collection: "required",
       tax_id_collection: { enabled: true },
       locale: "fr",
-      success_url: `${origin}${conf.retour}?option=ok`,
-      cancel_url: `${origin}${conf.retour}`,
+      success_url: option === "site" ? `${origin}/dashboard/site?nouveau=1&paiement=ok` : `${origin}${conf.retour}?option=ok`,
+      cancel_url: option === "site" || option === "widget" ? `${origin}/dashboard/abonnement` : `${origin}${conf.retour}`,
     });
     await notifierSlack(pro.profession, `🛒 Paiement de l'option ${conf.nom} ouvert : ${cab.nom}`, [["Contact", `${pro.prenom ?? ""} ${pro.nom ?? ""} · ${pro.email}`], ["Ville", cab.ville]]);
     return NextResponse.json({ ok: true, url: session.url });

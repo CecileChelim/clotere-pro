@@ -2,10 +2,13 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { BoutonStripe } from "@/components/dashboard/AbonnementActions";
 import { etatAbonnement } from "@/lib/abonnement";
-import { libelleFormule, lignesTarif, prixPeriode, totalMensuel } from "@/lib/tarifs";
+import { PRIX, libelleFormule, lignesTarif, prixPeriode, totalMensuel } from "@/lib/tarifs";
+import { ApportAffaires } from "@/components/dashboard/ApportAffaires";
+import { ActiverOption } from "@/components/options/ActiverOption";
+import { prixSite } from "@/lib/options";
 
-export default async function AbonnementPage({ searchParams }: { searchParams: Promise<{ paiement?: string }> }) {
-  const { paiement } = await searchParams;
+export default async function AbonnementPage({ searchParams }: { searchParams: Promise<{ paiement?: string; activation?: string }> }) {
+  const { paiement, activation } = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/dashboard/abonnement");
@@ -16,6 +19,42 @@ export default async function AbonnementPage({ searchParams }: { searchParams: P
     ? await db.from("cabinets").select("*").eq("id", pro.cabinet_id).maybeSingle()
     : { data: null };
   const { count } = pro?.cabinet_id ? await db.from("professionals").select("id", { count: "exact", head: true }).eq("cabinet_id", pro.cabinet_id) : { count: 1 };
+  // Formule page : l'apport d'affaires à la performance, et le widget de prise de rdv s'il est souscrit (ou proposé).
+  if (cab?.page_seule) {
+    const widget = !!cab.offre_widget;
+    // Chaque offre a son propre abonnement Stripe : le portail permet de résilier l'une sans l'autre.
+    const gerer = pro?.role !== "membre" ? <BoutonStripe action="portal" className="btn-outline">Gérer ou résilier</BoutonStripe> : null;
+    const Ligne = ({ nom, statut, detail, action }: { nom: string; statut: string; detail: string; action: React.ReactNode }) => (
+      <div className="flex flex-wrap items-start justify-between gap-4 py-5 first:pt-0 last:pb-0">
+        <div>
+          <p className="text-sm text-gray-500">{nom}</p>
+          <p className="mt-1 text-2xl font-medium text-gray-950">{statut}</p>
+          <p className="mt-1 text-sm text-gray-600">{detail}</p>
+        </div>
+        {action}
+      </div>
+    );
+    const carteWidget = (
+      <div className="card mt-8 divide-y divide-gray-100 p-6 sm:p-8">
+        {paiement === "ok" && (
+          <p className="mb-5 rounded-2xl bg-emerald-50 p-4 text-sm font-medium text-emerald-700 ring-1 ring-emerald-200">
+            ✓ Merci ! Votre paiement est enregistré. Il peut falloir quelques secondes pour qu&apos;il apparaisse ci-dessous.
+          </p>
+        )}
+        <Ligne nom="Widget de prise de rendez-vous" statut={widget ? "Actif" : "Non souscrit"}
+          detail={`${PRIX.widget} € HT / mois par professionnel · site internet, fiche Google, LinkedIn, signature e-mail · sans engagement.`}
+          action={widget ? gerer : <a href="/dashboard/widget" className="btn-solid">Activer le widget</a>} />
+        <Ligne nom="Site internet" statut={!cab.offre_site ? "Non créé" : cab.site_paye ? "En ligne" : "En attente de paiement"}
+          detail={cab.offre_site
+            ? `${prixSite(cab)} € HT / mois · ${cab.offre_rdv === false ? "formulaire de contact" : "prise de rendez-vous et actualités"} · sans engagement.`
+            : `Votre site en 10 minutes, à partir de ${PRIX.siteContact} € HT / mois, payé à sa mise en ligne.`}
+          action={!cab.offre_site ? <a href="/dashboard/site" className="btn-solid">Créer mon site</a>
+            : cab.site_paye ? gerer
+            : <ActiverOption option="site" label="Payer et mettre en ligne" className="btn-solid" />} />
+      </div>
+    );
+    return <ApportAffaires activation={activation} retour="/dashboard/abonnement" extra={carteWidget} />;
+  }
   const e = etatAbonnement(cab);
   const nb = Math.max(1, count ?? 1);
   const lignes = lignesTarif(cab, nb);

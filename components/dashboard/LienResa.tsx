@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-export function LienResa({ url, compact = false }: { url: string; compact?: boolean }) {
+export function LienResa({ url, compact = false, titre = "Votre page de prise de rendez-vous" }: { url: string; compact?: boolean; titre?: string }) {
   const [copie, setCopie] = useState(false);
   const copier = async () => { try { await navigator.clipboard.writeText(url); setCopie(true); setTimeout(() => setCopie(false), 2000); } catch {} };
   if (compact) {
@@ -22,7 +22,7 @@ export function LienResa({ url, compact = false }: { url: string; compact?: bool
   return (
     <div className="mb-8 flex flex-col gap-3 rounded-2xl bg-gray-50 p-4 ring-1 ring-black/5 sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium text-gray-500">Votre page de prise de rendez-vous</p>
+        <p className="text-xs font-medium text-gray-500">{titre}</p>
         <p className="truncate font-mono text-sm text-gray-950">{url.replace(/^https?:\/\//, "")}</p>
       </div>
       <div className="flex shrink-0 gap-2">

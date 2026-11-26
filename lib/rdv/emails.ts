@@ -83,6 +83,17 @@ const reponsesHtml = (r: RdvComplet) => !r.reponses?.length ? "" : `<table role=
     ${r.reponses.map((x) => `<tr><td style="padding:8px 14px;color:#6b7280;font-size:13px;width:45%;vertical-align:top;border-bottom:1px solid #f3f4f6">${esc(x.question)}</td><td style="padding:8px 14px;color:#111827;font-size:14px;font-weight:600;border-bottom:1px solid #f3f4f6">${esc(x.reponse)}</td></tr>`).join("")}
   </table>`;
 
+/** Demande venue de la fiche clotere.fr : rappel de la facturation au lead (dashboard › Apport d'affaires). */
+const encartLead = (lead: { facture: boolean; montantHT: number; contestableJusqu: string; lien: string }) =>
+  `<div style="margin-top:20px;padding:14px 16px;border-radius:12px;background:#f5f3ff;font-size:13px;line-height:1.5;color:#4c1d95">
+    <strong>Demande apportée par Clotere</strong> (fiche clotere.fr) ·
+    ${lead.facture
+      ? `${lead.montantHT} € HT, contestable jusqu'au ${esc(fmtDateHeure(lead.contestableJusqu))}
+         (client absent, hors de vos domaines, doublon ou fausse demande). Une annulation par le client n'est pas facturée.
+         <a href="${lead.lien}" style="color:${ACCENT}">Voir mes rendez-vous apportés</a>`
+      : `non facturée : ce client vous a déjà contacté via Clotere ces 30 derniers jours.`}
+  </div>`;
+
 const bonjour = (prenom: string | null, nom: string) => `<p>Bonjour ${esc(prenom || nom)},</p>`;
 const citation = (txt: string) =>
   `<div style="margin:18px 0;padding:16px 18px;border-left:3px solid ${ACCENT};background:#fafafa;border-radius:8px;color:#111827">${nl2br(txt)}</div>`;
@@ -104,7 +115,7 @@ export const mails = {
   }),
 
   /** Pro — nouvelle demande à traiter. */
-  demandePro: (r: RdvComplet, l: Liens) => ({
+  demandePro: (r: RdvComplet, l: Liens, lead: { facture: boolean; montantHT: number; contestableJusqu: string; lien: string } | null = null) => ({
     sujet: `Nouvelle demande de rendez-vous : ${nomClient(r)} — ${fmtDateHeure(r.creneau_debut)}`,
     html: layout(r, "Nouvelle demande de rendez-vous", `<p><strong>${esc(nomClient(r))}</strong> souhaite un rendez-vous${r.suivi_existant ? " (client existant)" : ""}.</p>
       ${recap(r, r.creneau_debut, true)}
@@ -112,7 +123,21 @@ export const mails = {
       ${reponsesHtml(r)}
       ${r.message ? citation(r.message) : ""}
       ${bouton(l.gerer, "Gérer la demande")}
-      <p style="font-size:13px;color:#6b7280">Validez, refusez ou proposez d'autres créneaux en un clic, sans vous connecter.</p>`),
+      <p style="font-size:13px;color:#6b7280">Validez, refusez ou proposez d'autres créneaux en un clic, sans vous connecter.</p>
+      ${lead ? encartLead(lead) : ""}`),
+  }),
+
+  /** Pro (formule page, sans carte) — demande annoncée sans les coordonnées du client. */
+  demandeProSansCarte: (r: RdvComplet, lienCarte: string) => ({
+    sujet: `Nouvelle demande de rendez-vous via Clotere — ${fmtDateHeure(r.creneau_debut)}`,
+    html: layout(r, "Vous avez une nouvelle demande de rendez-vous", `<p>Un client vient de demander un rendez-vous depuis votre page Clotere.</p>
+      <table role="presentation" style="width:100%;border-collapse:collapse;margin:18px 0;border:1px solid #e5e7eb;border-radius:12px">
+        <tr><td style="padding:8px 14px;color:#6b7280;font-size:13px;width:45%">Motif</td><td style="padding:8px 14px;font-size:14px;font-weight:600">${esc(r.motif?.libelle ?? "Rendez-vous")}</td></tr>
+        <tr><td style="padding:8px 14px;color:#6b7280;font-size:13px">Créneau demandé</td><td style="padding:8px 14px;font-size:14px;font-weight:600">${esc(fmtDateHeure(r.creneau_debut))}</td></tr>
+      </table>
+      <p>Pour consulter la demande et les coordonnées du client, ajoutez votre carte bancaire. Aucun débit immédiat : Clotere est rémunérée au rendez-vous apporté, et vous pouvez contester un rendez-vous jusqu'à 48 h après le créneau.</p>
+      <p style="font-size:13px;color:#6b7280">Sans carte sous 48 h, la prise de rendez-vous se met en pause sur votre page jusqu'à son ajout.</p>
+      ${bouton(lienCarte, "Ajouter ma carte et voir la demande")}`),
   }),
 
   /** Client — rendez-vous confirmé (+ message de l'avocat). */

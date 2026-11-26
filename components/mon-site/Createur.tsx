@@ -335,9 +335,15 @@ function Inscription({ b, connecte, supabase, nomCabinet }: { b: Brouillon; conn
   async function creer() {
     setEtat("creation"); setErreur("");
     const r = await fetch("/api/site/creer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }).catch(() => null);
-    const j = (await r?.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+    const j = (await r?.json().catch(() => null)) as { ok?: boolean; error?: string; paiement?: string | null } | null;
     if (j?.ok) {
       try { localStorage.removeItem(CLE_BROUILLON); sessionStorage.setItem(FLAG_SITE_CREE, b.formule); } catch { /* */ }
+      // Formule page : paiement du site avant sa mise en ligne.
+      if (j.paiement === "checkout") {
+        const p = await fetch("/api/options/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ option: "site" }) }).catch(() => null);
+        const pj = (await p?.json().catch(() => null)) as { url?: string } | null;
+        if (pj?.url) { window.location.href = pj.url; return; }
+      }
       window.location.href = "/dashboard/site?nouveau=1";
       return;
     }

@@ -18,6 +18,8 @@ export type MotifDraft = {
   /** Domaine de la taxonomie (ex. avocat-travail) : détermine les questions posées au client. */
   domaine_id?: string | null;
   questionnaire_actif?: boolean;
+  /** Sujets traités (spécialités du domaine) proposés au client sous ce motif. */
+  specialite_ids?: string[];
 };
 
 type Domaine = { id: string; label: string; description: string };

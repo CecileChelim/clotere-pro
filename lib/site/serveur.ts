@@ -13,12 +13,13 @@ import { HONORAIRES_MODES, PAIEMENT_MOYENS, SERVICES, labels } from "@/lib/honor
 
 const anon = () => createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
-const CABINET_COLS = "id, nom, adresse, code_postal, ville, telephone, barreau, siret, profession, offre_site, offre_rdv, trial_ends_at, subscription_status, google_rating, google_reviews_count, google_reviews_url, google_business_url, google_reviews, google_synced_at, google_place_id, google_place_url";
+const CABINET_COLS = "id, nom, adresse, code_postal, ville, telephone, barreau, siret, profession, offre_site, offre_rdv, trial_ends_at, subscription_status, page_seule, site_paye, offre_widget, google_rating, google_reviews_count, google_reviews_url, google_business_url, google_reviews, google_synced_at, google_place_id, google_place_url";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export type SiteRow = {
   id: string; cabinet_id: string; professional_id: string | null; profession: Profession; slug: string; template: TemplateId; palette: string;
   sections: SectionId[]; contenu: Partial<Contenu> | null; taille: Taille | null; complement_adresse: string | null; photo_couverture: string | null; photo_portrait: string | null; email_contact?: string | null;
+  domaine?: string | null; domaine_statut?: string | null;
 };
 
 export function formuleDe(cab: { offre_rdv?: boolean | null } | null | undefined): Formule {
@@ -152,8 +153,15 @@ export async function creerSite(user: { id: string; email: string }, b: Brouillo
   } else {
     const { data: deja } = await db.from("sites").select("slug").eq("cabinet_id", cabinetId).maybeSingle();
     if (deja) return { slug: deja.slug as string, cabinetId, nouveauCompte: false, dejaExistant: true };
+    const { data: c } = await db.from("cabinets").select("page_seule, offre_widget").eq("id", cabinetId).maybeSingle();
+    // Formule page : le site est un abonnement séparé, payé à la création. La formule choisie (contact / rdv) fixe son prix ;
+    // avec le widget déjà payé, la prise de rdv reste active.
+    const widgetPaye = !!c?.offre_widget;
     // Client existant (widget) : on garde sa prise de rdv, le site s'ajoute.
-    await db.from("cabinets").update({ offre_site: true, offre_site_depuis: new Date().toISOString().slice(0, 10) }).eq("id", cabinetId);
+    await db.from("cabinets").update({
+      offre_site: true, offre_site_depuis: new Date().toISOString().slice(0, 10),
+      ...(c?.page_seule ? { offre_rdv: widgetPaye || b.formule === "rdv" } : {}),
+    }).eq("id", cabinetId);
   }
 
   if (!proId) {

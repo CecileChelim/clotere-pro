@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { etatAbonnement } from "@/lib/abonnement";
+import { siteEnLigne } from "@/lib/abonnement";
 import { chargerSitePublic } from "@/lib/site/serveur";
 import { variablesPalette } from "@/lib/site/palettes";
 import { policesSite, FONT_INTER, FONT_MANROPE } from "@/components/mon-site/fonts";
@@ -29,7 +29,7 @@ function Bloc({ titre, children }: { titre: string; children: React.ReactNode })
 export default async function MentionsLegalesPage({ params }: Params) {
   const { ville: slug } = await params;
   const s = await chargerSitePublic(slug);
-  if (!s || !s.cab?.offre_site || !etatAbonnement(s.cab).actif) notFound();
+  if (!s || !siteEnLigne(s.cab)) notFound();
   const d = s.rendu;
   const avocat = d.profession === "avocat";
   const editeur = d.cabinet.nom;

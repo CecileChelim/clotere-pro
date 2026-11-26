@@ -10,6 +10,8 @@ import { EnTetePage } from "@/components/dashboard/EnTetePage";
 import { EditeurSite, type OngletSite } from "@/components/mon-site/EditeurSite";
 import { MessagesSite, type MessageSite } from "@/components/mon-site/Messages";
 import { BoutonActiverRdv, SitePresentation } from "@/components/mon-site/Upsells";
+import { DomainePerso } from "@/components/mon-site/DomainePerso";
+import { CIBLE_CNAME, IP_NETLIFY } from "@/lib/site/domaine";
 
 export const metadata = { title: "Mon site" };
 
@@ -40,8 +42,9 @@ export default async function MonSitePage({ searchParams }: { searchParams: Prom
   const nonLus = (messages ?? []).filter((m) => !m.lu).length;
   const onglet: OngletSite = o === "messages" || o === "publication" || o === "design" ? o : "textes";
   const url = `${profession === "comptable" ? "comptable" : "avocat"}.clotere.fr/${s.site.slug}`;
-  const abo = etatAbonnement(ctx.cab);
-  const paye = ctx.cab.subscription_status === "actif";
+  // Formule page : le site est un abonnement séparé (site_paye), sans essai.
+  const abo = ctx.cab.page_seule ? { actif: !!ctx.cab.site_paye, essai: false, joursRestants: 0, statut: "" } : etatAbonnement(ctx.cab);
+  const paye = ctx.cab.page_seule ? !!ctx.cab.site_paye : ctx.cab.subscription_status === "actif";
   const contact = ctx.cab.offre_rdv === false;
   const titulaire = ctx.pro.role !== "membre";
 
@@ -50,6 +53,14 @@ export default async function MonSitePage({ searchParams }: { searchParams: Prom
       <Ligne label="Adresse du site">
         <a href={`/${s.site.slug}`} target="_blank" rel="noopener" className="font-medium underline underline-offset-2">{url}</a>
         <p className="mt-1 text-gray-500">À mettre sur votre fiche Google, votre signature e-mail et LinkedIn.</p>
+      </Ligne>
+      <Ligne label="Nom de domaine">
+        {titulaire ? (
+          <DomainePerso urlClotere={url} cibles={{ cname: CIBLE_CNAME, ip: IP_NETLIFY }}
+            initial={{ domaine: s.site.domaine ?? null, statut: s.site.domaine_statut ?? null }} />
+        ) : (
+          <p className="text-gray-500">Seul le titulaire du cabinet peut relier un nom de domaine.</p>
+        )}
       </Ligne>
       <Ligne label="Statut">
         <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${paye ? "bg-emerald-50 text-emerald-700" : abo.actif ? "bg-amber-50 text-amber-800" : "bg-red-50 text-red-700"}`}>

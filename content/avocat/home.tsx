@@ -1,7 +1,7 @@
 import type { HomeData } from "@/components/landing/HomeTemplate";
 import { VisualPriseRdv, VisualSite, VisualVisibilite } from "@/components/landing/FeatureVisuals";
-import { CTA_DEMO, CTA_SITE, PAGES } from "@/lib/landing-avocat";
-import { FAQ_DEONTOLOGIE, FAQ_ENGAGEMENT } from "./shared";
+import { AVOCAT, CTA_DEMO, PAGES } from "@/lib/landing-avocat";
+import { FAQ_DEONTOLOGIE, FAQ_ENGAGEMENT, FAQ_PAIEMENT_RDV } from "./shared";
 
 // Accueil avocat.clotere.fr — maquette Figma « Avocat · Accueil (avocat.clotere.fr) ».
 export const homeAvocat: HomeData = {
@@ -10,25 +10,33 @@ export const homeAvocat: HomeData = {
     eyebrow: "CROISSANCE DES CABINETS D’AVOCATS",
     title: "Accélérez la croissance de votre cabinet",
     subtitle: "Site internet, prise de rendez-vous, avis Google, référencement et IA : tout ce qu’il faut pour qu’un client choisisse votre cabinet plutôt qu’un autre.",
-    ctas: [CTA_DEMO],
+    ctas: [AVOCAT.ctaPage, { ...CTA_DEMO, style: "secondary" }],
+    note: "Apport d’affaires 100 % à la performance · Sans abonnement · Sans engagement",
   },
   cartes: [
     {
       badge: "01",
+      eyebrow: "APPORT D’AFFAIRES",
+      title: "Développez votre clientèle, à la performance.",
+      text: "Des rendez-vous qualifiés apportés par Clotere, rémunérés au résultat.",
+      cta: { href: PAGES.apport, label: "Découvrir l’apport d’affaires →" },
+    },
+    {
+      badge: "02",
       eyebrow: "SITE INTERNET",
       title: "Votre site en ligne en 10 minutes.",
       text: "Vous le créez seul, la prise de rendez-vous est incluse.",
       cta: { href: PAGES.site, label: "Créer mon site →" },
     },
     {
-      badge: "02",
+      badge: "03",
       eyebrow: "PRISE DE RENDEZ-VOUS",
       title: "Des rendez-vous qualifiés, 24h/24.",
       text: "Les demandes arrivent triées, directement dans votre agenda.",
       cta: { href: PAGES.rdv, label: "Découvrir la prise de rdv →" },
     },
     {
-      badge: "03",
+      badge: "04",
       eyebrow: "RÉFÉRENCEMENT",
       title: "Soyez l’avocat qu’on trouve sur Google et dans les IA.",
       text: "Articles, fiche Google et référencement local sur vos domaines.",
@@ -80,12 +88,13 @@ export const homeAvocat: HomeData = {
       // TODO réponse à valider
       a: "Oui. Vous pouvez connecter le nom de domaine que votre cabinet utilise déjà, ou en choisir un nouveau au moment de la mise en ligne.",
     },
+    FAQ_PAIEMENT_RDV,
     FAQ_DEONTOLOGIE,
     FAQ_ENGAGEMENT,
   ],
   cta: {
     title: "Prêt à remplir votre agenda ? Lancez-vous aujourd’hui.",
-    subtitle: "En ligne en 10 minutes, sans engagement.",
-    ctas: [CTA_SITE, CTA_DEMO],
+    subtitle: "Votre profil en ligne en 5 minutes, sans abonnement ni engagement.",
+    ctas: [AVOCAT.ctaPage, CTA_DEMO],
   },
 };

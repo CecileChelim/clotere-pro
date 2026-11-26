@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { limiteAtteinte } from "@/lib/antispam";
 import { envoyerMail } from "@/lib/envoi-mail";
 import { esc, pageMail, urlEspace } from "@/lib/mail-compte";
-import { etatAbonnement } from "@/lib/abonnement";
+import { siteEnLigne } from "@/lib/abonnement";
 
 // Formulaire de contact d'un site (formule 69 €) : message enregistré dans l'espace du cabinet + e-mail au titulaire.
 const s = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
@@ -21,8 +21,8 @@ export async function POST(req: Request) {
   const db = createAdminClient();
   const { data: site } = await db.from("sites").select("id, cabinet_id, profession, professional_id").eq("id", siteId).maybeSingle();
   if (!site) return NextResponse.json({ ok: false, error: "Site introuvable." }, { status: 404 });
-  const { data: cab } = await db.from("cabinets").select("nom, trial_ends_at, subscription_status").eq("id", site.cabinet_id).maybeSingle();
-  if (!etatAbonnement(cab).actif) return NextResponse.json({ ok: false, error: "Ce formulaire est momentanément indisponible." }, { status: 403 });
+  const { data: cab } = await db.from("cabinets").select("nom, trial_ends_at, subscription_status, page_seule, site_paye, offre_site").eq("id", site.cabinet_id).maybeSingle();
+  if (!siteEnLigne(cab)) return NextResponse.json({ ok: false, error: "Ce formulaire est momentanément indisponible." }, { status: 403 });
 
   const { error } = await db.from("site_messages").insert({ site_id: site.id, cabinet_id: site.cabinet_id, ...msg, prenom: msg.prenom || null, telephone: msg.telephone || null, objet: msg.objet || null });
   if (error) { console.error("[site contact]", error.message); return NextResponse.json({ ok: false, error: "L'envoi a échoué, réessayez dans un instant." }, { status: 500 }); }

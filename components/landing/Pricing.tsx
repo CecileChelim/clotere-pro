@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CTA_SITE, DEMO_LINK, SIGNUP, type LandingConfig } from "@/lib/landing-config";
+import { CTA_SITE, SIGNUP, type LandingConfig } from "@/lib/landing-config";
 import { CheckIcon, ClockIcon, CrossIcon, SectionHeading } from "./ui";
 import { btnMd, btnPrimary, btnSecondary, btnSoft } from "./styles";
 
@@ -12,6 +12,8 @@ type Offre = {
   nom: string;
   accroche: string;
   prix: number;
+  /** Offre sans prix affiché (apport d'affaires) : texte à la place du montant. */
+  sansPrix?: { titre: string; sous: string };
   badge?: { label: string; plein: boolean };
   cta: { label: string; href: string; style: "primary" | "secondary" | "soft" };
   lignes: Ligne[];
@@ -23,7 +25,7 @@ type Offre = {
   bientot?: boolean;
 };
 
-const OFFRES: Offre[] = [
+const offres = (conf: LandingConfig): Offre[] => [
   {
     nom: "Vitrine",
     dataCta: "tarif_vitrine",
@@ -38,7 +40,7 @@ const OFFRES: Offre[] = [
       ["Prise de rendez-vous qualifiée", "exclu"],
       ["Blog", "exclu"],
       ["Récolte automatique des avis Google", "exclu"],
-      ["Apport d’affaires", "exclu"],
+      ["Cumulable avec l’apport d’affaires", "inclus"],
     ],
   },
   {
@@ -55,20 +57,23 @@ const OFFRES: Offre[] = [
       ["Blog pour votre référencement", "inclus"],
       ["Récolte automatique des avis Google", "inclus"],
       ["Synchronisation Google Agenda et Outlook", "inclus"],
-      ["Apport d’affaires", "exclu"],
+      ["Cumulable avec l’apport d’affaires", "inclus"],
     ],
   },
   {
-    nom: "Croissance",
-    dataCta: "etre_prevenu",
-    accroche: "Pour recevoir des dossiers",
-    prix: 169,
-    badge: { label: "OUVRE BIENTÔT", plein: false },
-    bientot: true,
-    cta: { label: "Être prévenu", href: DEMO_LINK, style: "soft" },
+    nom: "Apport d’affaires",
+    dataCta: "tarif_apport",
+    accroche: "Pour développer votre clientèle",
+    prix: 0,
+    sansPrix: { titre: "À la performance", sous: "Sans abonnement ni frais fixes · rémunéré au rendez-vous apporté" },
+    badge: { label: "NOUVEAU", plein: false },
+    cta: { label: conf.ctaPage.label, href: conf.ctaPage.href, style: "soft" },
     lignes: [
-      ["Tout l’offre Rendez-vous", "inclus"],
-      ["Apport d’affaires : des dossiers envoyés par Clotere", "bientot"],
+      ["Profil mis en avant sur clotere.fr", "inclus"],
+      ["Rendez-vous qualifiés par motif et questionnaire", "inclus"],
+      ["Rémunération au rendez-vous apporté, aucun frais fixe", "inclus"],
+      ["Rendez-vous contestable : client absent, hors domaine, doublon", "inclus"],
+      ["Budget mensuel plafonné, sans engagement", "inclus"],
     ],
   },
 ];
@@ -119,11 +124,18 @@ function Carte({ o, annuelActif, sansAnnuel = false }: { o: Offre; annuelActif: 
         )}
       </div>
       <p className="text-[18px] font-medium italic text-brand">{o.accroche}</p>
+      {o.sansPrix ? (
+        <p className="flex flex-col gap-1">
+          <span className="font-manrope text-[40px] font-semibold leading-[1.3] tracking-[-1px] text-nuit">{o.sansPrix.titre}</span>
+          <span className="text-[13px] text-nuit/60">{o.sansPrix.sous}</span>
+        </p>
+      ) : (
       <p className="flex items-baseline gap-2">
         <span className={`font-manrope text-[52px] font-semibold tracking-[-1.3px] ${o.bientot ? "text-nuit/55" : "text-nuit"}`}>{euros(prix)}</span>
         <span className="text-[15px] text-nuit/60">HT / mois</span>
       </p>
-      {!sansAnnuel && (
+      )}
+      {!sansAnnuel && !o.sansPrix && (
       <p className="-mt-2 text-[13px] text-nuit/60">
         {annuelActif ? `facturé annuellement, au lieu de ${euros(o.prix)} HT / mois` : `soit ${euros(annuel(o.prix))} HT / mois en annuel (-10 %)`}
       </p>
@@ -157,7 +169,7 @@ function Carte({ o, annuelActif, sansAnnuel = false }: { o: Offre; annuelActif: 
 export default function Pricing({ conf, variant = "offres" }: { conf: LandingConfig; variant?: "offres" | "outil" }) {
   const [annuelActif, setAnnuelActif] = useState(false);
   const outil = variant === "outil";
-  const offres = outil ? [OUTIL] : OFFRES;
+  const liste = outil ? [OUTIL] : offres(conf);
 
   return (
     <section id="tarifs" className="flex w-full scroll-mt-6 flex-col items-center gap-12 rounded-[40px] bg-brand-section px-4 py-20 sm:px-8 lg:gap-14 lg:px-[112px] lg:py-[120px]">
@@ -187,7 +199,7 @@ export default function Pricing({ conf, variant = "offres" }: { conf: LandingCon
       )}
 
       <div className={`grid w-full items-start gap-6 ${outil ? "max-w-[420px]" : "max-w-[1200px] grid-cols-1 md:grid-cols-3"}`}>
-        {offres.map((o) => (
+        {liste.map((o) => (
           <Carte key={o.nom} o={o} annuelActif={annuelActif} sansAnnuel={outil} />
         ))}
       </div>
@@ -201,7 +213,7 @@ export default function Pricing({ conf, variant = "offres" }: { conf: LandingCon
             </Link>
           </>
         ) : (
-          "Prix HT. Offres sans engagement. Paiement annuel : -10 %."
+          "Prix HT. Offres sans engagement. Paiement annuel : -10 %. Tarif de l’apport d’affaires présenté dans votre espace avant toute activation."
         )}
       </p>
     </section>

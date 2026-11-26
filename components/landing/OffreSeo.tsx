@@ -1,7 +1,13 @@
-import { CTA_DEMO } from "@/lib/landing-config";
+import { CTA_DEMO, type Cta } from "@/lib/landing-config";
 import { CheckItem, CtaLink, SectionHeading } from "./ui";
 
-export type OffreSurMesure = { badge: string; titre: string; accroche: string; texte: string; inclus: string[] };
+export type OffreSurMesure = {
+  badge: string; titre: string; accroche: string; texte: string; inclus: string[];
+  /** Sous-titre de la section (par défaut : accompagnement sur mesure). */
+  sousTitre?: string;
+  /** CTA (par défaut : réserver une démo). */
+  cta?: Cta;
+};
 
 export const OFFRE_SEO: OffreSurMesure = {
   badge: "RÉFÉRENCEMENT",
@@ -25,14 +31,14 @@ export const OFFRE_SEO: OffreSurMesure = {
 export default function OffreSeo({ offre = OFFRE_SEO }: { offre?: OffreSurMesure }) {
   return (
     <section id="offre" className="flex w-full scroll-mt-6 flex-col items-center gap-12 rounded-[40px] bg-brand-section px-4 py-20 sm:px-8 lg:gap-14 lg:px-[112px] lg:py-[120px]">
-      <SectionHeading eyebrow="L’offre Clotere" title={offre.titre} subtitle="Un accompagnement sur mesure pour votre cabinet, sans engagement." />
+      <SectionHeading eyebrow="L’offre Clotere" title={offre.titre} subtitle={offre.sousTitre ?? "Un accompagnement sur mesure pour votre cabinet, sans engagement."} />
       <article className="flex w-full max-w-[880px] flex-col gap-8 rounded-[32px] border-2 border-brand bg-white p-7 drop-shadow-[0px_24px_28px_rgba(20,18,31,0.12)] sm:p-10 md:flex-row md:items-center md:gap-12">
         <div className="flex flex-col gap-4 md:w-[280px] md:shrink-0">
           <span className="self-start rounded-full bg-brand px-3 py-[5px] font-geistmono text-[11px] font-semibold tracking-[0.66px] text-white">{offre.badge}</span>
           <h3 className="text-[28px] font-semibold leading-[1.15] tracking-[-0.7px] text-nuit">{offre.accroche}</h3>
           <p className="text-[15px] leading-[1.5] text-nuit/70">{offre.texte}</p>
           <div className="pt-2">
-            <CtaLink cta={CTA_DEMO} />
+            <CtaLink cta={offre.cta ?? CTA_DEMO} />
           </div>
         </div>
         <div className="h-px w-full bg-black/[0.08] md:h-auto md:w-px md:self-stretch" />

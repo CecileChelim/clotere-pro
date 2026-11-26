@@ -19,6 +19,7 @@ export async function relancesEssai() {
   const { data: cabs } = await db.from("cabinets")
     .select("id, trial_ends_at, rappel_essai_j2_at, rappel_essai_fin_at, abonnement_quantite, offre_site, offre_rdv")
     .eq("subscription_status", "essai")
+    .eq("page_seule", false)
     .lte("trial_ends_at", new Date(now + 2 * 86400000).toISOString())
     .gte("trial_ends_at", new Date(now - 7 * 86400000).toISOString());
 

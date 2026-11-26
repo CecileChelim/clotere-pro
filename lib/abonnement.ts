@@ -11,3 +11,12 @@ export function etatAbonnement(c: { subscription_status?: string | null; trial_e
 }
 
 export const PRIX_MENSUEL_HT = 69;
+
+type CabAcces = { subscription_status?: string | null; trial_ends_at?: string | null; page_seule?: boolean | null; offre_widget?: boolean | null; site_paye?: boolean | null; offre_site?: boolean | null; offre_rdv?: boolean | null };
+
+/** Site en ligne : abonnement de base actif, ou (formule page) abonnement « site » payé. */
+export const siteEnLigne = (c: CabAcces | null | undefined) => !!c?.offre_site && (c?.page_seule ? !!c.site_paye : etatAbonnement(c).actif);
+
+/** Prise de rdv directe (widget, site, lien) : abonnement de base actif, ou (formule page) widget payé ou site avec rdv payé. */
+export const rdvDirectOuvert = (c: CabAcces | null | undefined) =>
+  c?.page_seule ? !!(c.offre_widget || (c.site_paye && c.offre_rdv !== false)) : etatAbonnement(c).actif;
