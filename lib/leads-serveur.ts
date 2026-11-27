@@ -162,7 +162,7 @@ export async function tachesLeads() {
 
   // 3. Une fois par mois : facture des lignes en attente (celles déjà reprises par la facture d'abonnement sont ignorées par Stripe).
   const mois = moisCle();
-  const { data: cabs } = await db.from("cabinets").select("id, stripe_customer_id")
+  const { data: cabs } = await db.from("cabinets").select("id, stripe_customer_id, nom, adresse, code_postal, ville")
     .not("stripe_customer_id", "is", null).or(`leads_facture_mois.is.null,leads_facture_mois.neq.${mois}`);
   for (const c of cabs ?? []) {
     const { count } = await db.from("leads").select("id", { count: "exact", head: true })
@@ -172,8 +172,10 @@ export async function tachesLeads() {
       continue;
     }
     try {
+      await adresseFiscale(c);
+      // Montants HT (tax_behavior exclusive) : Stripe Tax ajoute la TVA.
       const facture = await stripe<{ id: string }>("invoices", {
-        customer: c.stripe_customer_id, collection_method: "charge_automatically", auto_advance: true,
+        customer: c.stripe_customer_id, collection_method: "charge_automatically", auto_advance: true, automatic_tax: { enabled: true },
         pending_invoice_items_behavior: "include", description: "Rendez-vous apportés par Clotere (mois précédent)",
       });
       await stripe(`invoices/${facture.id}/finalize`, {});
@@ -190,4 +192,15 @@ export async function tachesLeads() {
   for (const c of actifs ?? []) await majOuvertureLeads(c.id);
 
   return { leads_clos: clos, leads_lignes: lignes, leads_factures: factures };
+}
+
+/** Stripe Tax a besoin d'une adresse sur le client : à défaut, on reprend celle du cabinet. */
+async function adresseFiscale(c: { stripe_customer_id: string | null; nom?: string | null; adresse?: string | null; code_postal?: string | null; ville?: string | null }) {
+  if (!c.stripe_customer_id) return;
+  const client = await stripe<{ address?: { country?: string | null } | null }>(`customers/${c.stripe_customer_id}`);
+  if (client.address?.country) return;
+  await stripe(`customers/${c.stripe_customer_id}`, {
+    address: { country: "FR", line1: c.adresse || undefined, postal_code: c.code_postal || undefined, city: c.ville || undefined },
+    ...(c.nom ? { name: c.nom } : {}),
+  });
 }

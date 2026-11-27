@@ -31,6 +31,8 @@ export async function POST(req: Request) {
     }
     const session = await stripe<{ url: string }>("checkout/sessions", {
       mode: "setup", customer, payment_method_types: ["card"], client_reference_id: cab.id,
+      // Adresse de facturation : nécessaire au calcul de la TVA sur les factures de rendez-vous.
+      billing_address_collection: "required", customer_update: { address: "auto", name: "auto" },
       metadata: { cabinet_id: cab.id, type: "leads" }, setup_intent_data: { metadata: { cabinet_id: cab.id, type: "leads" } },
       locale: "fr",
       success_url: `${origin}/dashboard/${cab.page_seule ? "abonnement" : "leads"}?activation=ok`,

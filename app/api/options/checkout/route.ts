@@ -50,6 +50,10 @@ export async function POST(req: Request) {
       allow_promotion_codes: true,
       billing_address_collection: "required",
       tax_id_collection: { enabled: true },
+      // Prix en HT (tax_behavior exclusive) : Stripe Tax ajoute la TVA (20 % en France, autoliquidation UE avec n° de TVA).
+      automatic_tax: { enabled: true },
+      // Client Stripe existant : l'adresse et la raison sociale saisies au paiement sont enregistrées (requis pour le calcul de TVA).
+      ...(cab.stripe_customer_id ? { customer_update: { address: "auto", name: "auto" } } : {}),
       locale: "fr",
       success_url: option === "site" ? `${origin}/dashboard/site?nouveau=1&paiement=ok` : `${origin}${conf.retour}?option=ok`,
       cancel_url: option === "site" || option === "widget" ? `${origin}/dashboard/abonnement` : `${origin}${conf.retour}`,
