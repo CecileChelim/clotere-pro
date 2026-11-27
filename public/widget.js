@@ -13,7 +13,7 @@
     var o = document.createElement("div");
     o.style.cssText = "position:fixed;inset:0;z-index:2147483646;background:rgba(17,24,39,.55);display:flex;align-items:center;justify-content:center;padding:16px";
     var box = document.createElement("div");
-    box.style.cssText = "position:relative;width:100%;max-width:1100px;height:100%;max-height:860px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,.35)";
+    box.style.cssText = "position:relative;width:100%;max-width:760px;height:100%;max-height:820px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,.35)";
     var f = document.createElement("iframe");
     f.src = url; f.title = "Prise de rendez-vous";
     f.style.cssText = "width:100%;height:100%;border:0";

@@ -97,8 +97,11 @@ function Radio({ on }: { on: boolean }) {
 const choice = (on: boolean) =>
   `flex w-full items-center gap-4 rounded-xl border-2 px-3.5 py-3 text-left transition ${on ? "border-violet-600 bg-violet-50/60" : "border-gray-200 bg-white hover:border-gray-300"}`;
 
-/** integre : tunnel affiché dans une fenêtre sur clotere.fr (iframe), sans en-tête ni colonne du pro. */
-export function BookingFlow({ pro, motifs, horaires, indisponible = false, integre = false }: { pro: BookingPro; motifs: Motif[]; horaires: Horaires; indisponible?: boolean; integre?: boolean }) {
+/** integre : tunnel affiché dans une fenêtre sur clotere.fr (iframe), sans en-tête ni colonne du pro.
+ *  embed : tunnel ouvert dans la modal du widget sur le site du cabinet (widget.js, BoutonRdv) — uniquement les étapes. */
+export function BookingFlow({ pro, motifs, horaires, indisponible = false, integre = false, embed = false }: { pro: BookingPro; motifs: Motif[]; horaires: Horaires; indisponible?: boolean; integre?: boolean; embed?: boolean }) {
+  // Sans cadre : ni en-tête, ni colonne du pro, ni pied de page.
+  const sansCadre = integre || embed;
   const conf = PROFESSIONS[pro.profession];
   const lePro = pro.profession === "avocat" ? "l'avocat" : "le cabinet";
   const [step, setStep] = useState(0);
@@ -198,8 +201,8 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false, integ
   }, [integre, step]);
 
   return (
-    <div className={integre ? "flex flex-col bg-white" : "flex min-h-screen flex-col bg-gray-50"}>
-      {!integre && <>
+    <div className={sansCadre ? "flex flex-col bg-white" : "flex min-h-screen flex-col bg-gray-50"}>
+      {!sansCadre && <>
       <div className="h-1 bg-violet-600" />
       {/* Barre du cabinet */}
       <header className="border-b border-gray-200 bg-white">
@@ -216,15 +219,15 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false, integ
       </header>
       </>}
 
-      <main className={integre ? "w-full flex-1" : "mx-auto w-full max-w-[1080px] flex-1 px-3 py-4 sm:px-6 sm:py-10"}>
-        {!integre && <>
+      <main className={sansCadre ? "w-full flex-1" : "mx-auto w-full max-w-[1080px] flex-1 px-3 py-4 sm:px-6 sm:py-10"}>
+        {!sansCadre && <>
         <h1 className="px-1 text-xl font-bold tracking-tight text-gray-900 sm:px-0 sm:text-[28px]">Prendre rendez-vous</h1>
         <p className="mt-2 hidden text-[15px] text-gray-500 sm:block">Réservez un créneau en quelques minutes. Votre demande est confirmée par {lePro} sous 24 h ouvrées.</p>
         </>}
 
-        <div className={integre ? "grid grid-cols-1" : "mt-3 grid grid-cols-1 overflow-hidden sm:mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm md:grid-cols-[300px_1fr]"}>
+        <div className={sansCadre ? "grid grid-cols-1" : "mt-3 grid grid-cols-1 overflow-hidden sm:mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm md:grid-cols-[300px_1fr]"}>
           {/* ---------- Colonne pro ---------- */}
-          {!integre && <aside className="flex flex-col border-b border-gray-200 p-4 sm:p-6 md:border-r md:border-b-0">
+          {!sansCadre && <aside className="flex flex-col border-b border-gray-200 p-4 sm:p-6 md:border-r md:border-b-0">
             <div className="flex items-center gap-3 md:block">
               {pro.photo
                 ? <img src={pro.photo} alt={pro.nomAffiche} className="h-12 w-12 shrink-0 rounded-xl object-cover md:h-14 md:w-14" />
@@ -372,7 +375,7 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false, integ
           </aside>}
 
           {/* ---------- Module ---------- */}
-          <section className={integre ? "p-1 sm:p-2" : "p-5 sm:p-7"}>
+          <section className={integre ? "p-1 sm:p-2" : embed ? "px-5 pt-14 pb-6 sm:px-8 sm:pb-8" : "p-5 sm:p-7"}>
             {step < 4 && (
               <>
                 <div className="grid grid-cols-4 gap-2">
@@ -585,7 +588,7 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false, integ
                 <h3 className="mt-4 text-2xl font-bold text-gray-900">Votre demande a bien été envoyée</h3>
                 <p className="mt-3 text-gray-500">Le rendez-vous n&apos;est pas encore confirmé : {pro.nomAffiche} doit valider votre demande. Vous recevrez un email dès sa confirmation (pensez à vérifier vos spams).</p>
                 {suiviUrl && (
-                  <a href={suiviUrl} target={integre ? "_blank" : undefined} rel={integre ? "noopener" : undefined} className="mt-6 inline-flex items-center justify-center rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-700">Suivre mon rendez-vous</a>
+                  <a href={suiviUrl} target={sansCadre ? "_blank" : undefined} rel={sansCadre ? "noopener" : undefined} className="mt-6 inline-flex items-center justify-center rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-700">Suivre mon rendez-vous</a>
                 )}
                 <div className="mt-8 rounded-2xl border border-gray-200 p-5 text-left">
                   <p className="text-sm font-semibold text-gray-900 first-letter:uppercase">{dateLabel}</p>
@@ -602,12 +605,12 @@ export function BookingFlow({ pro, motifs, horaires, indisponible = false, integ
         </div>
       </main>
 
-      {!integre && <footer className="mx-auto flex w-full max-w-[1080px] flex-col justify-between gap-2 px-6 pb-8 text-[13px] text-gray-400 sm:flex-row">
+      {!sansCadre && <footer className="mx-auto flex w-full max-w-[1080px] flex-col justify-between gap-2 px-6 pb-8 text-[13px] text-gray-400 sm:flex-row">
         <span>Prise de rendez-vous propulsée par {conf.brand}</span>
         <span><a href="https://notaire.clotere.fr/mentions-legales" className="hover:text-gray-600">Mentions légales</a> · <a href="https://notaire.clotere.fr/politique-confidentialite" className="hover:text-gray-600">Confidentialité</a></span>
       </footer>}
       {/* Drawer « À propos » (absent en mode intégré : ses boutons d'ouverture sont masqués) */}
-      {!integre && <div className={`fixed inset-0 z-50 ${about ? "" : "pointer-events-none"}`} aria-hidden={!about}>
+      {!sansCadre && <div className={`fixed inset-0 z-50 ${about ? "" : "pointer-events-none"}`} aria-hidden={!about}>
         <div onClick={() => setAbout(false)} className={`absolute inset-0 bg-gray-900/40 transition-opacity ${about ? "opacity-100" : "opacity-0"}`} />
         <aside role="dialog" aria-modal="true" aria-label={`À propos de ${pro.profession === "avocat" ? "Clotere" : "Clotere"}`}
           className={`absolute inset-y-0 right-0 flex w-full max-w-md flex-col bg-white shadow-2xl transition-transform duration-300 ${about ? "translate-x-0" : "translate-x-full"}`}>

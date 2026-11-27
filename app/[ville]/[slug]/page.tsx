@@ -47,11 +47,13 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   };
 }
 
-export default async function BookingPage({ params, searchParams }: Params & { searchParams: Promise<{ integre?: string; source?: string }> }) {
+export default async function BookingPage({ params, searchParams }: Params & { searchParams: Promise<{ integre?: string; embed?: string; source?: string }> }) {
   const { slug } = await params;
   // ?integre=1 : tunnel affiché dans la fiche clotere.fr (iframe), voir clotere-site/components/fichePro.
   const sp = await searchParams;
   const integre = sp.integre === "1";
+  // ?embed=1 : modal du widget sur le site du cabinet (public/widget.js, BoutonRdv) — seulement les étapes.
+  const embed = !integre && sp.embed === "1";
   // Venue de clotere.fr : ouverte si les leads sont activés et sous le plafond (indépendamment de l'abonnement).
   const viaClotere = sp.source === "clotere";
   const d = await charger(slug);
@@ -91,5 +93,5 @@ export default async function BookingPage({ params, searchParams }: Params & { s
     },
   };
 
-  return <BookingFlow pro={pro} motifs={d.motifs} horaires={d.horaires} indisponible={viaClotere ? !cab?.leads_ouverts : !rdvDirectOuvert(cab)} integre={integre} />;
+  return <BookingFlow pro={pro} motifs={d.motifs} horaires={d.horaires} indisponible={viaClotere ? !cab?.leads_ouverts : !rdvDirectOuvert(cab)} integre={integre} embed={embed} />;
 }
