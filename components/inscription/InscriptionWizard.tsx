@@ -11,6 +11,7 @@ import { avecPrefixe, LINKEDIN_PREFIX, LINKEDIN_STRIP, PrefixInput } from "@/com
 import { PROFESSIONS, type MotifDraft, type Profession } from "@/lib/professions-config";
 import { competencesDe, motifsDepuisSpecialites, selectionParDomaine, type Domaine } from "@/lib/taxonomie";
 import { devinerBarreau, majuscule } from "@/lib/barreaux";
+import { slugProLibre } from "@/lib/slug";
 
 export type Etape = "vous" | "cabinet" | "presence" | "expertise" | "sujets" | "motifs";
 const ETAPES: { id: Etape; label: string }[] = [
@@ -26,7 +27,6 @@ const input = "w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-
 const label = "mb-1.5 block text-sm font-medium text-gray-950";
 const btn = "rounded-full bg-gray-950 px-6 py-3 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-40";
 const url = (v: string) => (v.trim() ? (/^https?:\/\//.test(v.trim()) ? v.trim() : `https://${v.trim()}`) : null);
-const slugify = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
 type Props = {
   profession: Profession; userId: string; userEmail: string; taxo: Domaine[];
@@ -130,7 +130,7 @@ export function InscriptionWizard({ profession, userId, userEmail, taxo, initial
       if (e1 || !c) return fail("Impossible d'enregistrer le cabinet.");
       const { data: p, error: e2 } = await supabase.from("professionals").insert({
         auth_user_id: userId, prenom: vous.prenom, nom: vous.nom, email: userEmail, telephone: vous.telephone || null,
-        bio: vous.bio || null, photo_url: photo, slug: `${slugify(`${vous.prenom}-${vous.nom}`)}-${Math.random().toString(36).slice(2, 6)}`,
+        bio: vous.bio || null, photo_url: photo, slug: await slugProLibre(supabase, vous.prenom, vous.nom),
         ville: cab.ville, cabinet: cab.nom, cabinet_id: c.id, role: "titulaire", profession, onboarding_step: "presence",
       }).select("id").single();
       if (e2 || !p) return fail("Impossible de créer votre profil.");

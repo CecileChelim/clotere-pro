@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { PROFESSIONS, motifsDepuisDomaines, type Profession } from "@/lib/professions-config";
 import { contenuParDefaut, fusionContenu } from "@/lib/site/contenu";
 import { slugSite, SLUGS_RESERVES } from "@/lib/site/slug";
+import { slugProLibre } from "@/lib/slug";
 import { palette } from "@/lib/site/palettes";
 import { SECTIONS, type Contenu, type Formule, type SectionId, type SiteRendu, type Taille, type TemplateId } from "@/lib/site/types";
 import type { AvisGoogle } from "@/lib/google";
@@ -165,7 +166,7 @@ export async function creerSite(user: { id: string; email: string }, b: Brouillo
   }
 
   if (!proId) {
-    const slugPro = `${slugSite(b.prenom, b.nom, "", "")}-${Math.random().toString(36).slice(2, 6)}`;
+    const slugPro = await slugProLibre(db, b.prenom, b.nom);
     const { data: pro, error } = await db.from("professionals").insert({
       auth_user_id: user.id, prenom: b.prenom, nom: b.nom, email: user.email, telephone: b.cabinet.telephone || null,
       slug: slugPro, ville: b.cabinet.ville, cabinet: b.cabinet.nom, cabinet_id: cabinetId, role: "titulaire", profession: b.profession,
